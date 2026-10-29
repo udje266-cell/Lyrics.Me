@@ -38,7 +38,7 @@ python3 -m http.server 8080
 
 ### Application Android (APK)
 
-Téléchargement direct : **https://udje266-cell.github.io/Lyrics.Me/dist/Verso.apk** (ouvrir le fichier sur le téléphone, autoriser l'installation depuis cette source). Code et compilation : `android/README.md`.
+Page d'installation : **https://udje266-cell.github.io/Lyrics.Me/installer.html** (lien direct : https://udje266-cell.github.io/Lyrics.Me/dist/Verso.apk) (ouvrir le fichier sur le téléphone, autoriser l'installation depuis cette source). Code et compilation : `android/README.md`.
 
 ### L'utiliser sur votre téléphone
 

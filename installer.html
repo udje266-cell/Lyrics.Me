@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Installer Verso sur Android</title>
+  <link rel="icon" href="icons/icon.png" type="image/png">
+  <style>
+    :root { color-scheme: dark; }
+    body { margin: 0; background: #131a11; color: #eef3e4; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.5; }
+    main { max-width: 560px; margin: 0 auto; padding: 32px 20px 60px; }
+    img.icon { width: 96px; height: 96px; border-radius: 22px; }
+    h1 { font-size: 1.8rem; margin: 16px 0 6px; }
+    .btn { display: block; text-align: center; background: #cce988; color: #161f14; font-weight: 700; font-size: 1.15rem; padding: 18px; border-radius: 999px; text-decoration: none; margin: 24px 0 8px; }
+    .muted { color: #9fae94; font-size: .9rem; }
+    ol { padding-left: 1.2em; } li { margin-bottom: 10px; }
+    .box { background: #212b1d; border: 1px solid #364430; border-radius: 16px; padding: 16px 18px; margin-top: 22px; }
+    a { color: #cce988; }
+  </style>
+</head>
+<body>
+<main>
+  <img class="icon" src="icons/icon.png" alt="">
+  <h1>Installer Verso sur Android</h1>
+  <p class="muted">Application personnelle · fichier APK de 3,5 Mo</p>
+  <a class="btn" href="dist/Verso.apk" download="Verso.apk" type="application/vnd.android.package-archive">Télécharger Verso.apk</a>
+  <p class="muted">Ouvrez cette page dans <b>Chrome</b> sur votre téléphone.</p>
+  <ol>
+    <li>Touchez <b>Télécharger Verso.apk</b>, puis confirmez si Chrome le demande.</li>
+    <li>Ouvrez le fichier téléchargé (notification ou application <b>Fichiers → Téléchargements</b>).</li>
+    <li>Android demande d'autoriser l'installation depuis Chrome ou Fichiers : <b>Paramètres → Autoriser</b>, puis revenez en arrière.</li>
+    <li>Touchez <b>Installer</b>. Pour une mise à jour, l'installation se fait par-dessus : vos données sont conservées.</li>
+  </ol>
+  <div class="box">
+    <b>Le fichier s'appelle « Verso.zip » ?</b><br>
+    Une APK est techniquement une archive zip, et certaines applications la renomment. Ne l'ouvrez pas comme un zip :
+    renommez-la en <b>Verso.apk</b> dans l'application Fichiers (appui long → Renommer), puis touchez-la pour l'installer.
+    Évitez le bouton « Code → Download ZIP » de GitHub, qui télécharge tout le projet et non l'application.
+  </div>
+  <p class="muted" style="margin-top:22px">Préférez la version web ? <a href="./">Ouvrir Verso dans le navigateur</a></p>
+</main>
+</body>
+</html>

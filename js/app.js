@@ -849,7 +849,7 @@ async function renderSettings() {
     <section class="card-box"><h3>Sources de paroles</h3>
       <p class="small"><b>LRCLIB</b> (lrclib.net) — active. Gratuite, sans compte ni clé. Fournit les paroles complètes contribuées par sa communauté : à vérifier avant ajout. Recherche par titre et artiste, import depuis un lien LRCLIB.</p>
       <p class="small muted">Genius, Musixmatch et Spotify ne sont pas branchés : l'API publique de Genius ne fournit pas les paroles ; Musixmatch ne donne gratuitement que 30 % du texte et exige une clé et un contrat commercial pour le texte complet. Toute autre page web : collez le texte, le lien est conservé comme source.</p></section>
-    <section class="card-box"><h3>Installer l'application</h3><p class="small">Sur Android (Chrome) : menu ⋮ puis « Installer l'application » ou « Ajouter à l'écran d'accueil ». Sur ordinateur : icône d'installation dans la barre d'adresse.</p>
+    <section class="card-box"><h3>Installer l'application</h3>${android ? '' : '<p class="small"><a class="btn primary" href="installer.html">Télécharger l\'application Android (APK)</a></p>'}<p class="small">Sur Android (Chrome) : menu ⋮ puis « Installer l'application » ou « Ajouter à l'écran d'accueil ». Sur ordinateur : icône d'installation dans la barre d'adresse.</p>
       <button id="install" hidden class="primary">Installer Verso</button></section>
     <p class="small muted" style="text-align:center">Verso · application personnelle, sans compte et sans publicité.</p>`;
   $$('[data-t]').forEach(b => b.onclick = () => {
