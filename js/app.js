@@ -1,6 +1,6 @@
 import { db, uid, exportBackup, importBackup } from './db.js';
 import { searchLyrics, importFromUrl, findArtwork, fetchImage } from './sources.js';
-import { compressImage } from './render.js';
+import { compressImage, lightLogoURL } from './render.js';
 import { mountStudio, newCard } from './studio.js';
 import { renderAlbumForm, renderAlbum, attachAlbum, liveAlbums, albumRow } from './albums.js';
 
@@ -87,7 +87,10 @@ export function blobUrl(key, blob) {
 }
 const coverHtml = (s, cls = 'cover') => s.cover
   ? `<img class="${cls}" src="${blobUrl('song-' + s.id + s.updatedAt, s.cover)}" alt="">`
-  : `<span class="${cls}">${esc((s.title || '?')[0].toUpperCase())}</span>`;
+  : `<span class="${cls} ph" style="--ph:${placeholderTint(s.title + s.artist)}" aria-hidden="true">“</span>`;
+// Pochette de remplacement : une teinte stable par morceau, tirée des Ambiances.
+const PH_TINTS = ['#4f7a2a', '#0f5c6e', '#b23a7a', '#8a1f12', '#123a7a', '#6b4b2a', '#4a1f6b'];
+function placeholderTint(str) { let h = 0; for (const c of String(str)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return PH_TINTS[h % PH_TINTS.length]; }
 
 export function download(blob, name) {
   const a = document.createElement('a');
@@ -117,6 +120,15 @@ const routes = [
   [/^\/reglages$/, renderSettings, 'settings'],
 ];
 
+// Logo : variante au mot blanc quand l'interface est sombre.
+const darkMQ = matchMedia('(prefers-color-scheme: dark)');
+const isDark = () => document.documentElement.dataset.theme === 'dark' || (!document.documentElement.dataset.theme && darkMQ.matches);
+async function applyLogo() {
+  const url = isDark() ? await lightLogoURL() : null;
+  document.querySelectorAll('img.brand-logo').forEach(i => { i.src = url || 'icons/logo.png'; });
+}
+darkMQ.addEventListener('change', applyLogo);
+
 // Les navigations sont traitées l'une après l'autre : un écran lent à charger ne peut pas
 // écraser l'écran demandé ensuite.
 let routing = Promise.resolve();
@@ -132,7 +144,7 @@ async function doRoute() {
       $$('.nav a', document).forEach(a => a.classList.toggle('active', a.dataset.nav === nav));
       view.innerHTML = '';
       window.scrollTo(0, 0);
-      try { cleanup = (await fn(...m.slice(1))) || null; }
+      try { cleanup = (await fn(...m.slice(1))) || null; applyLogo(); }
       catch (e) { console.error(e); view.innerHTML = `<div class="notice err">Une erreur est survenue : ${esc(e.message)}</div>`; }
       return;
     }
@@ -144,6 +156,25 @@ export const go = h => { location.hash = h; };
 
 // --- Accueil --------------------------------------------------------------
 
+// Accueil : un vers de votre bibliothèque, mis en page comme sur une carte.
+function heroHtml(all) {
+  const pool = [];
+  for (const so of all) for (const l of (so.lyrics || '').split('\n')) {
+    const t = l.trim();
+    if (t.length > 14 && t.length < 70 && !/^[\[(]/.test(t)) pool.push({ t, so });
+  }
+  const pick = pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
+  const actions = `<div class="hero-actions"><a class="btn primary" href="#/ajouter/manuel">Ajouter des paroles</a>
+      <span class="hero-links"><a href="#/ajouter/album">un album</a><a href="#/ajouter/recherche">rechercher</a><a href="#/ajouter/lien">depuis un lien</a></span></div>`;
+  if (!pick) return `<div class="hero"><img class="hero-logo brand-logo" src="icons/logo.png" alt="Verso">
+      <p class="hero-lede">Gardez les paroles que vous aimez et transformez vos passages préférés en cartes.</p>${actions}</div>`;
+  const words = pick.t.split(' '), mid = Math.ceil(words.length / 2);
+  const lines = words.length > 5 ? [words.slice(0, mid).join(' '), words.slice(mid).join(' ')] : [pick.t];
+  return `<div class="hero">
+      <a class="verse" href="#/morceau/${pick.so.id}" aria-label="Ouvrir ${esc(pick.so.title)}">${lines.map(l => `<span>${esc(l)}</span>`).join('')}</a>
+      <p class="verse-src">${esc(pick.so.title)}, ${esc(pick.so.artist)}</p>${actions}</div>`;
+}
+
 async function renderHome() {
   const all = await liveSongs();
   const recent = all.sort((a, b) => b.createdAt - a.createdAt).slice(0, 5);
@@ -151,19 +182,10 @@ async function renderHome() {
   const drafts = cards.filter(c => c.draft).sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 6);
   const passages = (await db.all('passages')).sort((a, b) => b.createdAt - a.createdAt).slice(0, 4);
   view.innerHTML = `
-    <div class="hero">
-      <img class="hero-logo" src="icons/logo.png" alt="Verso">
-      <p class="muted" style="margin:0">Vos paroles préférées, en cartes. ${all.length} morceau${all.length > 1 ? 'x' : ''} · ${cards.filter(c => !c.draft).length} création${cards.filter(c => !c.draft).length > 1 ? 's' : ''}</p>
-      <div class="quick">
-        <a href="#/ajouter/manuel"><b>＋</b>Coller des paroles</a>
-        <a href="#/ajouter/album"><b>💿</b>Ajouter un album</a>
-        <a href="#/ajouter/recherche"><b>⌕</b>Rechercher</a>
-        <a href="#/ajouter/lien"><b>↗</b>Depuis un lien</a>
-      </div>
-    </div>
+    ${heroHtml(all)}
     ${drafts.length ? `<section><div class="page-head"><h2>Brouillons</h2><a href="#/creations">Tout voir</a></div><div class="gallery">${drafts.map(tileHtml).join('')}</div></section>` : ''}
     <section><div class="page-head"><h2>Ajoutés récemment</h2><a href="#/bibliotheque">Bibliothèque</a></div>
-      ${recent.length ? `<ul class="songs">${recent.map(songRow).join('')}</ul>` : `<div class="empty">Votre bibliothèque est vide.<br><br><a class="btn primary" href="#/ajouter">Ajouter un premier morceau</a></div>`}
+      ${recent.length ? `<ul class="songs">${recent.map(x => songRow(x)).join('')}</ul>` : `<div class="empty">Votre bibliothèque est vide.<br><br><a class="btn primary" href="#/ajouter">Ajouter un premier morceau</a></div>`}
     </section>
     ${passages.length ? `<section><h2>Passages favoris</h2>${passages.map(p => `<a class="card-box" style="display:block;text-decoration:none;color:inherit;margin-bottom:8px" href="#/morceau/${p.songId}">
       <div style="white-space:pre-line">${esc(p.text)}</div><div class="small muted" style="margin-top:6px">${esc(p.title)} · ${esc(p.artist)}${p.note ? ' — ' + esc(p.note) : ''}</div></a>`).join('')}</section>` : ''}`;
@@ -591,6 +613,7 @@ async function renderSettings() {
     try { localStorage.setItem('verso-theme', b.dataset.t); } catch {}
     if (b.dataset.t === 'auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = b.dataset.t;
     $$('[data-t]').forEach(x => x.classList.toggle('on', x === b));
+    applyLogo();
   });
   $('#sig').onchange = e => safe(() => db.setSetting('signature', e.target.value.trim())).then(() => toast('Signature enregistrée'));
   if ($('#persist')) $('#persist').onclick = async () => { const ok = await navigator.storage.persist(); toast(ok ? 'Stockage protégé' : 'Le navigateur a refusé (installez l\'application pour améliorer la protection).', { err: !ok }); renderSettings(); };

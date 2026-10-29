@@ -118,6 +118,15 @@ export function loadBrand() {
   return brandLoading;
 }
 
+// Logo pour l'interface en thème sombre (mot « verso » en blanc), en URL d'image.
+let lightLogoUrl = null;
+export async function lightLogoURL() {
+  if (lightLogoUrl) return lightLogoUrl;
+  await loadBrand();
+  if (!brandLight || !brandLight.toDataURL) return null;
+  return (lightLogoUrl = brandLight.toDataURL('image/png'));
+}
+
 export async function ensureFonts(style) {
   await loadBrand();
   if (!document.fonts) return;
