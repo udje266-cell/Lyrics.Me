@@ -77,6 +77,7 @@ export async function mountStudio(view, id) {
     </div>
     <div class="studio">
       <div class="stage" id="stage"><canvas id="cv" aria-label="Aperçu de la carte"></canvas><div class="warn" id="warn" hidden></div></div>
+        <div class="row" style="justify-content:center;margin-top:-6px"><label class="chip" style="margin:0;color:inherit;cursor:pointer">🖼 Photo de ma galerie<input type="file" id="q-photo" accept="image/*" hidden></label></div>
       <div>
         <div class="tabs">${[['texte', 'Texte'], ['fond', 'Fond'], ['style', 'Style'], ['format', 'Format']].map(([k, l]) => `<button data-tab="${k}">${l}</button>`).join('')}</div>
         <div class="panel" id="panel"></div>
@@ -224,8 +225,9 @@ export async function mountStudio(view, id) {
       ${bg.kind === 'ambiance' ? `<div class="field"><div class="chips" style="flex-wrap:wrap">${Object.entries(AMBIANCES).map(([k, a]) => `<button class="chip ${bg.ambiance === k ? 'on' : ''}" data-amb="${k}"><span class="swatch" style="width:18px;height:18px;min-height:0;background:linear-gradient(135deg,${a.blobs[0]},${a.blobs[1]})"></span>${a.label}</button>`).join('')}</div>
         <button style="margin-top:8px" id="b-shuffle">Autre variation ↻</button></div>` : ''}
       ${bg.kind === 'cover' && !card.images.cover ? '<div class="notice err field">Ce morceau n\'a pas de pochette. Ajoutez-en une dans la fiche du morceau, ou importez une photo.</div>' : ''}
-      ${bg.kind === 'photo' || !card.images.photo ? `<div class="field row"><label class="btn ${bg.kind === 'photo' && !card.images.photo ? 'primary' : ''}" style="margin:0;color:inherit">${card.images.photo ? 'Changer de photo' : 'Importer une photo'}<input type="file" id="b-photo" accept="image/*" hidden></label>
-        ${card.images.photo ? '<button class="ghost danger" id="b-nophoto">Retirer la photo</button>' : ''}</div>` : ''}
+      <div class="field row"><label class="btn ${bg.kind === 'photo' && !card.images.photo ? 'primary' : ''}" style="margin:0;color:inherit">🖼 ${card.images.photo ? 'Changer de photo' : 'Photo de ma galerie'}<input type="file" id="b-photo" accept="image/*" hidden></label>
+        ${card.images.photo && bg.kind !== 'photo' ? '<button id="b-usephoto">Utiliser ma photo</button>' : ''}
+        ${card.images.photo ? '<button class="ghost danger" id="b-nophoto">Retirer la photo</button>' : ''}</div>
       <div class="field row"><label style="margin:0">${bg.kind === 'gradient' ? 'Couleurs' : 'Couleur de fond'}</label><input type="color" id="b-c1" value="${bg.color}">${bg.kind === 'gradient' ? `<input type="color" id="b-c2" value="${bg.color2}">` : ''}</div>
       ${bg.kind === 'gradient' ? reg('angle', 'Angle', 0, 360, 5, () => bg.angle, v => bg.angle = v, v => v + '°') : ''}
       ${hasImg ? `<p class="small muted">Glissez sur l'aperçu pour déplacer l'image, pincez ou utilisez la molette pour zoomer.</p>
@@ -356,17 +358,9 @@ export async function mountStudio(view, id) {
     on('#b-c1', 'oninput', e => { bg.color = e.target.value; change(); });
     on('#b-c2', 'oninput', e => { bg.color2 = e.target.value; change(); });
     on('#b-tex', 'onchange', e => { bg.texture = e.target.value; change(); refreshPanel(); });
-    on('#b-photo', 'onchange', async e => {
-      const f = e.target.files[0]; if (!f) return;
-      try {
-        card.images.photo = await compressImage(f);
-        imgs.photo = await blobToBitmap(card.images.photo);
-        Object.assign(bg, { kind: 'photo', imgZoom: 1, imgX: 0, imgY: 0 });
-        if (!bg.veil) bg.veil = 0.35;
-        await setPalette(); change(); refreshPanel();
-      } catch (err) { toast(err.message, { err: true }); }
-    });
-    on('#b-nophoto', 'onclick', async () => { card.images.photo = null; imgs.photo = null; if (bg.kind === 'photo') bg.kind = 'solid'; await setPalette(); change(); refreshPanel(); });
+    on('#b-photo', 'onchange', e => usePhoto(e.target.files[0]));
+    on('#b-usephoto', 'onclick', async () => { bg.kind = 'photo'; await setPalette(); change(); refreshPanel(); });
+    on('#b-nophoto', 'onclick', async () => { card.images.photo = null; imgs.photo = null; if (bg.kind === 'photo') bg.kind = 'ambiance'; await setPalette(); change(); refreshPanel(); });
     on('#p-edit', 'onclick', () => { editPalette = !editPalette; refreshPanel(); });
     p.querySelectorAll('[data-pi]').forEach(inp => inp.onchange = () => { palette[+inp.dataset.pi] = inp.value; });
     on('#p-auto', 'onclick', () => {
@@ -486,6 +480,21 @@ export async function mountStudio(view, id) {
     const v = await openDialog(`<form method="dialog"><h3>${series.length} cartes créées</h3><p class="small muted">Elles sont dans Mes créations.</p><div class="row" style="justify-content:flex-end"><button value="no">Fermer</button><button value="ok" class="primary">Exporter la série</button></div></form>`);
     if (v === 'ok') exportCards(series, true);
   }
+
+  // Photo choisie dans la galerie de l'appareil : réduite puis copiée dans la carte.
+  async function usePhoto(f) {
+    if (!f) return;
+    try {
+      const bg = card.style.bg;
+      card.images.photo = await compressImage(f);
+      imgs.photo = await blobToBitmap(card.images.photo);
+      Object.assign(bg, { kind: 'photo', imgZoom: 1, imgX: 0, imgY: 0, blur: 0 });
+      if (!bg.veil) bg.veil = card.style.lineBg ? 0.1 : 0.35;
+      await setPalette(); change(); refreshPanel();
+      toast('Photo ajoutée : glissez sur l\'aperçu pour la recadrer (onglet Fond).');
+    } catch (err) { toast(err.message, { err: true }); }
+  }
+  $('#q-photo').onchange = e => { usePhoto(e.target.files[0]); e.target.value = ''; };
 
   const onResize = () => draw();
   window.addEventListener('resize', onResize);
