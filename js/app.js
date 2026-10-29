@@ -86,7 +86,7 @@ export function blobUrl(key, blob) {
   return url;
 }
 const coverHtml = (s, cls = 'cover') => s.cover
-  ? `<img class="${cls}" src="${blobUrl('song-' + s.id + s.updatedAt, s.cover)}" alt="">`
+  ? `<img class="${cls}" src="${blobUrl('song-' + s.id + s.updatedAt, s.cover)}" alt="" width="52" height="52" loading="lazy">`
   : `<span class="${cls} ph" style="--ph:${placeholderTint(s.title + s.artist)}" aria-hidden="true">“</span>`;
 // Pochette de remplacement : une teinte stable par morceau, tirée des Ambiances.
 const PH_TINTS = ['#4f7a2a', '#0f5c6e', '#b23a7a', '#8a1f12', '#123a7a', '#6b4b2a', '#4a1f6b'];
@@ -134,7 +134,13 @@ darkMQ.addEventListener('change', applyLogo);
 let routing = Promise.resolve();
 const route = () => { routing = routing.then(doRoute, doRoute); return routing; };
 
+let lastHash = location.hash;
 async function doRoute() {
+  if (dirtyForm && location.hash !== lastHash) {
+    if (!confirm('Vos modifications ne sont pas enregistrées. Quitter quand même ?')) { history.replaceState(null, '', lastHash); return; }
+    dirtyForm = false;
+  }
+  lastHash = location.hash;
   if (cleanup) { try { cleanup(); } catch {} cleanup = null; }
   document.body.classList.remove('reading', 'studio-mode');
   const path = decodeURIComponent(location.hash.slice(1) || '/');
@@ -166,7 +172,7 @@ function heroHtml(all) {
   const pick = pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
   const actions = `<div class="hero-actions"><a class="btn primary" href="#/ajouter/manuel">Ajouter des paroles</a>
       <span class="hero-links"><a href="#/ajouter/album">un album</a><a href="#/ajouter/recherche">rechercher</a><a href="#/ajouter/lien">depuis un lien</a></span></div>`;
-  if (!pick) return `<div class="hero"><img class="hero-logo brand-logo" src="icons/logo.png" alt="Verso">
+  if (!pick) return `<div class="hero"><img class="hero-logo brand-logo" src="icons/logo.png" alt="Verso" width="2172" height="724" fetchpriority="high">
       <p class="hero-lede">Gardez les paroles que vous aimez et transformez vos passages préférés en cartes.</p>${actions}</div>`;
   const words = pick.t.split(' '), mid = Math.ceil(words.length / 2);
   const lines = words.length > 5 ? [words.slice(0, mid).join(' '), words.slice(mid).join(' ')] : [pick.t];
@@ -193,14 +199,14 @@ async function renderHome() {
 }
 
 function tileHtml(c) {
-  return `<a class="tile" href="#/studio/${c.id}">${c.thumb ? `<img src="${blobUrl('thumb-' + c.id + c.updatedAt, c.thumb)}" alt="">` : '<img alt="">'}
+  return `<a class="tile" href="#/studio/${c.id}">${c.thumb ? `<img src="${blobUrl('thumb-' + c.id + c.updatedAt, c.thumb)}" alt="Aperçu de la carte" width="324" height="324" loading="lazy">` : '<img alt="">'}
     <div>${c.draft ? '<span class="badge">Brouillon · </span>' : ''}<b>${esc(c.title || 'Sans titre')}</b><br><span class="muted">${esc(c.artist || '')}</span></div></a>`;
 }
 
 function songRow(s, extra = '') {
   return `<li class="song"><a class="main" href="#/morceau/${s.id}">${coverHtml(s)}<div style="min-width:0">
     <div class="t">${esc(s.title)}</div><div class="a">${esc(s.artist)}${s.featuring ? ' feat. ' + esc(s.featuring) : ''}${s.album ? ' · ' + esc(s.album) : ''}</div>${extra}</div></a>
-    <button class="icon-btn ghost fav ${s.favorite ? 'on' : ''}" data-fav="${s.id}" aria-label="Favori">${s.favorite ? '★' : '☆'}</button></li>`;
+    <button class="icon-btn ghost fav ${s.favorite ? 'on' : ''}" data-fav="${s.id}" aria-label="Favori : ${esc(s.title)}" aria-pressed="${!!s.favorite}">${s.favorite ? '★' : '☆'}</button></li>`;
 }
 
 function bindFavs() {
@@ -208,7 +214,7 @@ function bindFavs() {
     const s = await db.get('songs', b.dataset.fav);
     s.favorite = !s.favorite; s.updatedAt = Date.now();
     await safe(() => db.put('songs', s));
-    b.classList.toggle('on', s.favorite); b.textContent = s.favorite ? '★' : '☆';
+    b.classList.toggle('on', s.favorite); b.textContent = s.favorite ? '★' : '☆'; b.setAttribute('aria-pressed', s.favorite);
   });
 }
 
@@ -225,7 +231,7 @@ async function renderLibrary() {
   const trashCount = all.length - live.length;
   view.innerHTML = `
     <div class="page-head"><h1>Ma bibliothèque</h1><a class="btn primary" href="#/ajouter">＋ Ajouter</a></div>
-    <div class="field"><input type="search" id="q" placeholder="Titre, artiste, album ou phrase des paroles…" value="${esc(lib.q)}" autocomplete="off"></div>
+    <div class="field"><input type="search" id="q" aria-label="Rechercher dans la bibliothèque" name="recherche" placeholder="Titre, artiste, album ou phrase des paroles…" value="${esc(lib.q)}" autocomplete="off"></div>
     <div class="chips" style="margin-bottom:8px">
       <button class="chip ${lib.albums ? 'on' : ''}" id="f-albums">💿 Albums</button>
       <button class="chip ${lib.fav ? 'on' : ''}" id="f-fav">★ Favoris</button>
@@ -332,7 +338,7 @@ async function songForm(song, { submitLabel, intro = '' } = {}) {
     <div><label for="f-src">Lien vers la publication d'origine</label><input id="f-src" type="url" value="${esc(song.sourceUrl)}" placeholder="https://…">
       ${song.sourceName ? `<div class="small muted" style="margin-top:4px">Source des paroles : ${esc(song.sourceName)}</div>` : ''}</div>
     <div class="row" style="align-items:flex-end">
-      <div id="cover-prev">${song.cover ? `<img class="cover" src="${URL.createObjectURL(song.cover)}" alt="">` : ''}</div>
+      <div id="cover-prev">${song.cover ? `<img class="cover" src="${URL.createObjectURL(song.cover)}" alt="Pochette" width="52" height="52">` : ''}</div>
       <div style="flex:1"><label for="f-cover">Pochette ou image</label><input type="file" id="f-cover" accept="image/*"></div>
       <button type="button" id="f-findcover">🎵 Trouver la pochette</button>
       ${song.cover ? '<button type="button" id="f-nocover" class="ghost">Retirer</button>' : ''}
@@ -342,7 +348,19 @@ async function songForm(song, { submitLabel, intro = '' } = {}) {
   </form>`;
 }
 
+// Prévient avant de quitter un formulaire modifié et non enregistré.
+let dirtyForm = false;
+window.addEventListener('beforeunload', e => { if (dirtyForm) { e.preventDefault(); e.returnValue = ''; } });
+export function guardForm(form) {
+  dirtyForm = false;
+  form.addEventListener('input', () => { dirtyForm = true; });
+  form.addEventListener('submit', () => { dirtyForm = false; }, true);
+}
+export const isDirty = () => dirtyForm;
+export const clearDirty = () => { dirtyForm = false; };
+
 function bindSongForm(song, onSaved) {
+  guardForm($('#songform'));
   let cover = song.cover || null;
   $('#f-txt').onchange = async e => {
     const f = e.target.files[0]; if (!f) return;
@@ -490,11 +508,11 @@ async function renderSong(id) {
     ${s.note ? `<div class="notice" style="margin-bottom:16px">${esc(s.note)}</div>` : ''}
     <div class="row spread" style="margin-bottom:8px"><span class="small muted">Touchez une ligne pour la sélectionner · appui long pour une plage</span>
       <span class="row"><button class="icon-btn" id="minus" aria-label="Réduire le texte">A−</button><button class="icon-btn" id="plus" aria-label="Agrandir le texte">A+</button></span></div>
-    <div class="lyrics" id="lyrics" style="--lsize:${size}rem">${lines.map((l, i) => !l.trim() ? '<div class="gap"></div>' : SECTION_RE.test(l) ? `<div class="sec">${esc(l.trim().replace(/^\[|\]$/g, ''))}</div>` : `<div class="ln" data-i="${i}">${esc(l)}</div>`).join('')}</div>
+    <div class="lyrics" id="lyrics" role="group" aria-label="Paroles : touchez ou appuyez sur Entrée pour sélectionner une ligne" style="--lsize:${size}rem">${lines.map((l, i) => !l.trim() ? '<div class="gap"></div>' : SECTION_RE.test(l) ? `<div class="sec">${esc(l.trim().replace(/^\[|\]$/g, ''))}</div>` : `<div class="ln" data-i="${i}" role="checkbox" aria-checked="false" tabindex="0">${esc(l)}</div>`).join('')}</div>
     <section style="margin-top:28px"><h2>Passages favoris</h2><div id="passages">${passages.length ? '' : '<p class="muted small">Sélectionnez des lignes puis « Garder le passage ».</p>'}</div></section>
     <section><h2>Cartes de ce morceau</h2>${cards.length ? `<div class="gallery">${cards.map(tileHtml).join('')}</div>` : '<p class="muted small">Aucune carte pour l\'instant.</p>'}</section>
     <div class="selbar" id="selbar" hidden>
-      <div class="row spread small" style="margin-bottom:6px"><b id="selcount"></b>
+      <div class="row spread small" style="margin-bottom:6px"><b id="selcount" aria-live="polite"></b>
         <span class="row"><button class="chip" id="range">Plage</button><button class="chip on" id="ell">« … » entre passages</button><button class="chip" id="clear">Effacer</button></span></div>
       <div class="preview" id="selprev"></div>
       <div class="row"><button class="primary" style="flex:1" id="mkcard">Créer une carte</button><button id="keep">Garder le passage</button></div>
@@ -515,7 +533,7 @@ async function renderSong(id) {
   drawPassages();
 
   const update = () => {
-    $$('.ln').forEach(el => el.classList.toggle('sel', sel.has(+el.dataset.i)));
+    $$('.ln').forEach(el => { const on = sel.has(+el.dataset.i); el.classList.toggle('sel', on); el.setAttribute('aria-checked', on); });
     $('#selbar').hidden = !sel.size;
     $('#selcount').textContent = `${sel.size} ligne${sel.size > 1 ? 's' : ''}`;
     $('#selprev').textContent = buildExcerpt(lines, sel, ellipsis);
@@ -544,6 +562,19 @@ async function renderSong(id) {
     if (rangeMode && anchor !== null) { selectRange(anchor, i); rangeMode = false; }
     else if (sel.has(i)) sel.delete(i); else sel.add(i);
     anchor = i; update();
+  });
+  lyr.addEventListener('keydown', e => {
+    const el = e.target.closest('.ln'); if (!el) return;
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      const i = +el.dataset.i;
+      if (e.shiftKey && anchor !== null) selectRange(anchor, i); else if (sel.has(i)) sel.delete(i); else sel.add(i);
+      anchor = i; update();
+    } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const all = $$('.ln'), k = all.indexOf(el) + (e.key === 'ArrowDown' ? 1 : -1);
+      if (all[k]) all[k].focus();
+    }
   });
   $('#range').onclick = () => { rangeMode = !rangeMode; update(); if (rangeMode) toast('Touchez la dernière ligne de la plage'); };
   $('#ell').onclick = () => { ellipsis = !ellipsis; update(); };

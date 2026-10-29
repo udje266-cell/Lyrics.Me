@@ -185,8 +185,8 @@ export async function mountStudio(view, id) {
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
   // --- Panneaux ----------------------------------------------------------
-  const slider = (key, label, min, max, step, get, set, fmt = v => v) => `<div class="field"><label>${label} <span class="muted" data-out="${key}">${fmt(get())}</span></label>
-    <input type="range" data-range="${key}" min="${min}" max="${max}" step="${step}" value="${get()}"></div>`;
+  const slider = (key, label, min, max, step, get, set, fmt = v => v) => `<div class="field"><label for="r-${key}">${label} <span class="muted" data-out="${key}">${fmt(get())}</span></label>
+    <input type="range" id="r-${key}" data-range="${key}" min="${min}" max="${max}" step="${step}" value="${get()}"></div>`;
   const sliders = {};
   const reg = (key, label, min, max, step, get, set, fmt) => { sliders[key] = { set, fmt: fmt || (v => v) }; return slider(key, label, min, max, step, get, set, fmt); };
   const seg = (key, options, current) => `<div class="seg" data-seg="${key}">${options.map(([v, l]) => `<button data-v="${v}" class="${String(current) === String(v) ? 'on' : ''}">${l}</button>`).join('')}</div>`;
@@ -206,7 +206,7 @@ export async function mountStudio(view, id) {
       <div class="row field"><button class="chip ${st.autoFit ? 'on' : ''}" id="t-fit">Remplir la carte</button><button class="chip ${st.shadow ? 'on' : ''}" id="t-shadow">Ombre</button>
         <button class="chip ${st.lineBg ? 'on' : ''}" id="t-bars">Bandeaux derrière les lignes</button>${st.lineBg ? `<input type="color" id="t-barcolor" value="${st.lineBg}" aria-label="Couleur des bandeaux">` : ''}</div>
       <div class="field"><label>Alignement</label>${seg('align', [['left', 'Gauche'], ['center', 'Centre'], ['right', 'Droite']], st.align)}</div>
-      <div class="field row"><label style="margin:0">Couleur</label><input type="color" id="t-color" value="${st.color}">${swatches('color')}</div>
+      <div class="field row"><label style="margin:0" for="t-color">Couleur</label><input type="color" id="t-color" value="${st.color}">${swatches('color')}</div>
       ${reg('lineHeight', 'Interligne', 0.8, 2, 0.02, () => st.lineHeight, v => st.lineHeight = v, v => (+v).toFixed(2))}
       ${reg('margin', 'Marges', 0.03, 0.2, 0.005, () => st.margin, v => st.margin = v, pct)}
       ${reg('posY', 'Position verticale du bloc (ou glissez sur l\'aperçu)', 0, 1, 0.01, () => st.posY, v => st.posY = v, v => v < 0.2 ? 'haut' : v > 0.8 ? 'bas' : 'milieu')}
@@ -218,7 +218,7 @@ export async function mountStudio(view, id) {
   }
   function swatches(target) {
     if (!palette.length) return '';
-    return `<span class="swatches">${palette.map(c => `<button class="swatch" style="background:${c}" data-sw="${target}" data-c="${c}" aria-label="${c}"></button>`).join('')}</span>`;
+    return `<span class="swatches">${palette.map(c => `<button class="swatch" style="background:${c}" data-sw="${target}" data-c="${c}" aria-label="Appliquer la couleur ${c}"></button>`).join('')}</span>`;
   }
   function panelFond() {
     const bg = card.style.bg;
@@ -231,7 +231,7 @@ export async function mountStudio(view, id) {
       <div class="field row"><label class="btn ${bg.kind === 'photo' && !card.images.photo ? 'primary' : ''}" style="margin:0;color:inherit">🖼 ${card.images.photo ? 'Changer de photo' : 'Photo de ma galerie'}<input type="file" id="b-photo" accept="image/*" hidden></label><button id="b-art">🎵 Images de l'artiste</button>
         ${card.images.photo && bg.kind !== 'photo' ? '<button id="b-usephoto">Utiliser ma photo</button>' : ''}
         ${card.images.photo ? '<button class="ghost danger" id="b-nophoto">Retirer la photo</button>' : ''}</div>
-      <div class="field row"><label style="margin:0">${bg.kind === 'gradient' ? 'Couleurs' : 'Couleur de fond'}</label><input type="color" id="b-c1" value="${bg.color}">${bg.kind === 'gradient' ? `<input type="color" id="b-c2" value="${bg.color2}">` : ''}</div>
+      <div class="field row"><label style="margin:0" for="b-c1">${bg.kind === 'gradient' ? 'Couleurs' : 'Couleur de fond'}</label><input type="color" id="b-c1" value="${bg.color}">${bg.kind === 'gradient' ? `<input type="color" id="b-c2" aria-label="Seconde couleur du dégradé" value="${bg.color2}">` : ''}</div>
       ${bg.kind === 'gradient' ? reg('angle', 'Angle', 0, 360, 5, () => bg.angle, v => bg.angle = v, v => v + '°') : ''}
       ${hasImg ? `<p class="small muted">Glissez sur l'aperçu pour déplacer l'image, pincez ou utilisez la molette pour zoomer.</p>
         ${reg('imgZoom', 'Zoom', 1, 4, 0.01, () => bg.imgZoom, v => bg.imgZoom = v, v => (+v).toFixed(2) + '×')}
@@ -243,7 +243,7 @@ export async function mountStudio(view, id) {
       <div class="field"><label for="b-tex">Texture</label><select id="b-tex">${Object.entries(TEXTURES).map(([k, l]) => `<option value="${k}" ${bg.texture === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
       ${bg.texture !== 'none' ? reg('textureAlpha', 'Intensité de la texture', 0.05, 0.8, 0.01, () => bg.textureAlpha, v => bg.textureAlpha = v, pct) : ''}
       <div class="card-box"><div class="row spread"><h3 style="margin:0">Palette de l'image</h3>${palette.length ? `<button class="chip ${editPalette ? 'on' : ''}" id="p-edit">Modifier</button>` : ''}</div>
-        ${palette.length ? `<div class="field" style="margin-top:10px">${editPalette ? `<span class="swatches">${palette.map((c, i) => `<input type="color" data-pi="${i}" value="${c}">`).join('')}</span>` : swatches(paletteTarget)}</div>
+        ${palette.length ? `<div class="field" style="margin-top:10px">${editPalette ? `<span class="swatches">${palette.map((c, i) => `<input type="color" data-pi="${i}" value="${c}" aria-label="Couleur ${i + 1} de la palette">`).join('')}</span>` : swatches(paletteTarget)}</div>
           <div class="row"><span class="small muted">Toucher une couleur l'applique à :</span>${seg('ptarget', [['bg', 'Fond'], ['color', 'Texte'], ['accent', 'Accent']], paletteTarget)}</div>
           <button style="margin-top:10px" id="p-auto">Harmonie automatique</button>`
         : `<p class="small muted">Disponible avec une pochette ou une photo.</p>`}</div>`;
@@ -261,12 +261,12 @@ export async function mountStudio(view, id) {
         <div class="row field"><button class="chip ${m.showTitle ? 'on' : ''}" data-mt="showTitle">Titre</button><button class="chip ${m.showArtist ? 'on' : ''}" data-mt="showArtist">Artiste</button>
           <button class="chip ${m.showCover ? 'on' : ''}" data-mt="showCover">Pochette</button><button class="chip ${m.showSignature ? 'on' : ''}" data-mt="showSignature">Signature</button></div>
         <div class="row field">${seg('mpos', [['top', 'En haut'], ['bottom', 'En bas']], m.pos)}${seg('malign', [['left', 'Gauche'], ['center', 'Centre'], ['right', 'Droite']], m.align)}</div>
-        <div class="field row"><button class="chip ${m.band ? 'on' : ''}" id="m-band">Bandeau en bas</button><button class="chip ${m.showLogo !== false ? 'on' : ''}" id="m-logo">Logo Verso</button>${m.band ? `<input type="color" id="m-bandc" value="${m.band}" aria-label="Couleur du bandeau"><label style="margin:0">Accent</label><input type="color" id="m-bacc" value="${m.bandAccent || '#cce988'}" aria-label="Couleur d'accent du bandeau">` : ''}</div>
+        <div class="field row"><button class="chip ${m.band ? 'on' : ''}" id="m-band">Bandeau en bas</button><button class="chip ${m.showLogo !== false ? 'on' : ''}" id="m-logo">Logo Verso</button>${m.band ? `<input type="color" id="m-bandc" value="${m.band}" aria-label="Couleur du bandeau"><label style="margin:0" for="m-bacc">Accent</label><input type="color" id="m-bacc" value="${m.bandAccent || '#cce988'}" aria-label="Couleur d'accent du bandeau">` : ''}</div>
         ${m.band ? `<div class="field"><label>Disposition du bandeau</label>${seg('bstyle', [['duo', 'Titre + artiste'], ['ligne', 'Une ligne'], ['etiquette', 'Étiquette'], ['capitales', 'Capitales']], m.bandStyle || 'duo')}</div>
 ` : ''}
         <div class="grid2"><div class="field"><label for="m-font">Police des informations</label><select id="m-font">${FONTS.map(x => `<option value="${x.id}" ${x.id === (m.font || (m.band ? 'grotesk' : 'inter')) ? 'selected' : ''}>${x.label}</option>`).join('')}</select></div>
           <div class="field"><label>Graisse</label>${(() => { const f = fontById(m.font || (m.band ? 'grotesk' : 'inter')); return f.weights.length > 1 ? seg('mweight', f.weights.map(w => [w, w >= 700 ? 'Gras' : 'Normal']), m.weight || Math.max(...f.weights)) : '<p class="small muted">Une seule graisse</p>'; })()}</div></div>
-        <div class="field row"><label style="margin:0">Couleur des informations</label><input type="color" id="m-color" value="${m.color || card.style.color}"></div>
+        <div class="field row"><label style="margin:0" for="m-color">Couleur des informations</label><input type="color" id="m-color" value="${m.color || card.style.color}"></div>
         ${reg('msize', 'Taille des informations', 18, 56, 1, () => m.size, v => m.size = v, v => v + ' px')}
         ${m.showSignature ? `<div class="grid2"><div class="field"><label for="m-sig">Signature</label><input id="m-sig" value="${esc(m.signature)}" placeholder="Votre pseudonyme"></div>
           <div class="field"><label for="m-sigpos">Position</label><select id="m-sigpos">${[['bottom-right', 'En bas à droite'], ['bottom-left', 'En bas à gauche'], ['bottom-center', 'En bas au centre'], ['top-right', 'En haut à droite'], ['top-left', 'En haut à gauche']].map(([v, l]) => `<option value="${v}" ${m.sigPos === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div></div>` : ''}

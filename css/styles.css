@@ -30,6 +30,7 @@
 }
 
 * { box-sizing: border-box; }
+html { touch-action: manipulation; }
 html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 16px; -webkit-tap-highlight-color: transparent; }
 body { min-height: 100dvh; overflow-x: hidden; }
 a { color: var(--accent); }
@@ -177,7 +178,7 @@ body.reading .selbar { bottom: calc(8px + env(safe-area-inset-bottom)); }
 .toast { pointer-events: auto; background: var(--text); color: var(--bg); padding: 10px 14px; border-radius: 12px; display: flex; gap: 12px; align-items: center; max-width: 92vw; box-shadow: 0 8px 24px rgba(0,0,0,.3); font-size: .9rem; }
 .toast.err { background: var(--danger); color: #fff; }
 .toast button { min-height: 32px; padding: 4px 10px; background: transparent; color: inherit; border-color: currentColor; }
-dialog { border: 1px solid var(--line); background: var(--surface); color: var(--text); border-radius: 18px; padding: 20px; width: min(520px, calc(100vw - 24px)); max-height: 86dvh; }
+dialog { overscroll-behavior: contain; border: 1px solid var(--line); background: var(--surface); color: var(--text); border-radius: 18px; padding: 20px; width: min(520px, calc(100vw - 24px)); max-height: 86dvh; }
 dialog::backdrop { background: rgba(0,0,0,.55); }
 .result { padding: 12px; border: 1px solid var(--line); border-radius: 12px; margin-bottom: 8px; cursor: pointer; background: var(--bg-2); width: 100%; text-align: left; display: block; border-radius: 12px; }
 .result:hover { border-color: var(--accent); }
@@ -205,3 +206,13 @@ details summary { cursor: pointer; padding: 8px 0; color: var(--muted); }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 @media (min-width: 900px) { #view { max-width: 1040px; } }
+
+h1, h2, h3 { text-wrap: balance; }
+.small, .muted, #count, [data-out] { font-variant-numeric: tabular-nums; }
+img.cover, .tile img { height: auto; }
+img.cover { height: 52px; }
+.song-head img.cover { height: 110px; }
+.skip { position: absolute; left: 8px; top: -60px; z-index: 100; background: var(--accent); color: var(--accent-ink); padding: 10px 14px; border-radius: 10px; }
+.skip:focus { top: 8px; }
+.lyrics .ln:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
+.hero-logo, .nav-brand img { height: auto; }

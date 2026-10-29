@@ -1,7 +1,7 @@
 // Albums : fiche d'album (titre, artiste, année, pochette) et ses morceaux.
 import { db, uid } from './db.js';
 import { compressImage } from './render.js';
-import { esc, norm, toast, safe, go, openDialog, confirmDialog, blobUrl, pickArtwork } from './app.js';
+import { esc, norm, toast, safe, go, openDialog, confirmDialog, blobUrl, pickArtwork, guardForm } from './app.js';
 
 const $ = (s, r = document.getElementById('view')) => r.querySelector(s);
 const $$ = (s, r = document.getElementById('view')) => [...r.querySelectorAll(s)];
@@ -33,11 +33,11 @@ export function albumRow(a, count) {
 function trackBlock(i, t = {}) {
   return `<div class="card-box field" data-track="${i}">
     <div class="row spread"><h3 style="margin:0">Morceau <span data-num>${i + 1}</span></h3><button type="button" class="icon-btn ghost danger" data-rmtrack aria-label="Retirer ce morceau">✕</button></div>
-    <div class="grid2" style="margin-top:8px"><div><label>Titre *</label><input data-f="title" value="${esc(t.title)}" required></div>
-      <div><label>Artistes invités</label><input data-f="featuring" value="${esc(t.featuring)}"></div></div>
-    <div style="margin-top:8px"><div class="row spread"><label>Paroles</label>
+    <div class="grid2" style="margin-top:8px"><div><label for="tt-${i}">Titre *</label><input id="tt-${i}" data-f="title" value="${esc(t.title)}" required></div>
+      <div><label for="tf-${i}">Artistes invités</label><input id="tf-${i}" data-f="featuring" value="${esc(t.featuring)}"></div></div>
+    <div style="margin-top:8px"><div class="row spread"><label for="tl-${i}">Paroles</label>
       <label class="btn ghost small" style="margin:0;color:var(--accent)">Importer un .txt<input type="file" data-txt accept=".txt,text/plain" hidden></label></div>
-      <textarea data-f="lyrics" style="min-height:140px" placeholder="Collez les paroles (ou laissez vide pour plus tard)">${esc(t.lyrics)}</textarea></div>
+      <textarea id="tl-${i}" data-f="lyrics" style="min-height:140px" placeholder="Collez les paroles (ou laissez vide pour plus tard)">${esc(t.lyrics)}</textarea></div>
   </div>`;
 }
 
@@ -71,7 +71,7 @@ export async function renderAlbumForm(id) {
       </div>
       <div><label for="a-src">Lien de la publication</label><input id="a-src" type="url" value="${esc(album.sourceUrl)}" placeholder="https://…"></div>
       <div><label for="a-note">Note personnelle</label><textarea id="a-note" style="min-height:70px">${esc(album.note)}</textarea></div>
-      ${id ? `<div class="card-box"><h3>Ordre des morceaux</h3>${tracks.length ? tracks.map(t => `<div class="row" style="margin-bottom:6px"><input data-order="${t.id}" value="${t.trackNo || ''}" inputmode="numeric" style="width:64px"><span>${esc(t.title)}</span></div>`).join('') : '<p class="small muted">Aucun morceau.</p>'}
+      ${id ? `<div class="card-box"><h3>Ordre des morceaux</h3>${tracks.length ? tracks.map(t => `<div class="row" style="margin-bottom:6px"><input data-order="${t.id}" aria-label="Numéro de piste de ${esc(t.title)}" value="${t.trackNo || ''}" inputmode="numeric" style="width:64px"><span>${esc(t.title)}</span></div>`).join('') : '<p class="small muted">Aucun morceau.</p>'}
         <p class="small muted">Pour ajouter un morceau, utilisez « Ajouter un morceau » sur la page de l'album.</p></div>`
       : `<h2 style="margin-top:12px">Morceaux</h2><div id="tracks">${trackBlock(0)}</div>
         <div class="row"><button type="button" id="addtrack">＋ Ajouter un morceau</button>
@@ -79,6 +79,7 @@ export async function renderAlbumForm(id) {
         <p class="small muted">Chaque fichier .txt devient un morceau (son nom de fichier sert de titre). La pochette de l'album est reprise par chaque morceau.</p>`}
       <div class="row" style="justify-content:flex-end"><button type="button" class="ghost" onclick="history.back()">Annuler</button><button class="primary">${id ? 'Enregistrer' : 'Ajouter l\'album'}</button></div>
     </form>`;
+  guardForm($('#albumform'));
   $$('[data-mode]').forEach(b => b.onclick = () => go('#/ajouter/' + b.dataset.mode));
   $('#a-cover').onchange = async e => {
     const f = e.target.files[0]; if (!f) return;
