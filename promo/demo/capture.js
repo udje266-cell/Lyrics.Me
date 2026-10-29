@@ -90,7 +90,7 @@ const RSS = `<?xml version="1.0"?><rss><channel>
   const p = await ctx.newPage();
   p.on('pageerror', e => console.log('ERR', e.message));
   const nav = async (h, w = 900) => { await p.evaluate(h => { location.hash = h; }, h); await p.waitForTimeout(w); };
-  const shot = async (name, full = false) => { await p.evaluate(() => document.querySelectorAll('.toast').forEach(t => t.remove())); await p.screenshot({ path: path.join(OUT, name + '.png'), fullPage: full }); console.log('capturé', name); };
+  const shot = async (name, full = false) => { await p.evaluate(full => { document.querySelectorAll('.toast').forEach(t => t.remove()); let st = document.getElementById('cap-full'); if (!st) { st = document.createElement('style'); st.id = 'cap-full'; document.head.append(st); } st.textContent = full ? '.nav,.search-fab{display:none!important}' : ''; }, full); await p.screenshot({ path: path.join(OUT, name + '.png'), fullPage: full }); console.log('capturé', name); };
 
   await p.goto(APP); await p.waitForTimeout(1200);
   // Profil et morceaux de démonstration.

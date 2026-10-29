@@ -3,14 +3,20 @@
     @font-face { font-family: "Space Grotesk"; font-weight: 700; src: url("assets/fonts/SpaceGrotesk-700-normal-latin.woff2") format("woff2"); }
     @font-face { font-family: "Space Grotesk"; font-weight: 700; src: url("assets/fonts/SpaceGrotesk-700-normal-latin-ext.woff2") format("woff2"); unicode-range: U+0100-024F; }
     #root { position: absolute; inset: 0; overflow: hidden; background: #131a11; font-family: "Space Grotesk", Inter, sans-serif; }
-    .phone { position: absolute; left: 190px; top: 250px; width: 700px; height: 900px; border-radius: 56px; overflow: hidden; border: 3px solid #364430; box-shadow: 0 40px 120px rgba(0,0,0,.55); background: #131a11; }
-    .phone img { position: absolute; left: 0; top: 0; width: 700px; height: auto; transform-origin: 0 0; }
+    .phone { position: absolute; left: 190px; top: 250px; width: 700px; height: 900px; border-radius: 74px; padding: 14px; background: linear-gradient(145deg, #2c2f2b, #0b0c0b 45%, #1d1f1c); box-shadow: 0 0 0 2px #3a3d38 inset, 0 40px 120px rgba(0,0,0,.6); }
+    .phone .screen { position: relative; width: 672px; height: 872px; border-radius: 60px; overflow: hidden; background: #131a11; }
+    .phone .screen > img { position: absolute; left: 0; top: 54px; width: 672px; height: auto; transform-origin: 0 0; }
+    .phone .sb { position: absolute; left: 0; right: 0; top: 0; height: 54px; background: #131a11; display: flex; align-items: center; justify-content: space-between; padding: 0 34px 0 40px; color: #eef3e4; font-family: Inter, sans-serif; font-size: 22px; font-weight: 700; }
+    .phone .sb svg { height: 20px; width: auto; fill: #eef3e4; margin-left: 8px; }
+    .phone .cam { position: absolute; left: 50%; top: 14px; width: 26px; height: 26px; margin-left: -13px; border-radius: 50%; background: #050505; box-shadow: 0 0 0 3px #1a1a1a; }
+    .phone .gest { position: absolute; left: 50%; bottom: 10px; width: 180px; height: 7px; margin-left: -90px; border-radius: 4px; background: rgba(238,243,228,.85); }
+    .phone .btn-side { position: absolute; right: -5px; top: 190px; width: 6px; height: 120px; border-radius: 3px; background: #2a2c29; }
     .claim { position: absolute; left: 90px; right: 90px; top: 172px; text-align: center; color: #cce988; font-size: 46px; font-weight: 700; letter-spacing: -0.02em; }
     .card { position: absolute; border-radius: 28px; box-shadow: 0 40px 120px rgba(0,0,0,.6); }
     
   </style>
   <div id="root" data-composition-id="news" data-width="1080" data-height="1920">
-    <div id="nw-claim" class="clip claim" data-start="0.00" data-duration="3.32"><span>L'actu et les tendances, chaque jour</span></div><div id="nw-home" class="clip phone" data-start="0.00" data-duration="3.32" data-layout-allow-overflow><img id="nw-home-img" src="assets/screens/01-accueil-full.png" alt="" ></div>
+    <div id="nw-claim" class="clip claim" data-start="0.00" data-duration="3.32"><span>L'actu et les tendances, chaque jour</span></div><div id="nw-home" class="clip phone" data-start="0.00" data-duration="3.32" data-layout-allow-overflow><div class="btn-side"></div><div class="screen"><img id="nw-home-img" src="assets/screens/01-accueil-full.png" alt="" ><div class="sb"><span>20:41</span><span><svg viewBox="0 0 24 24"><path d="M2 22h3v-4H2zm5 0h3v-8H7zm5 0h3V9h-3zm5 0h3V3h-3z"/></svg><svg viewBox="0 0 24 24"><path d="M12 20l3.5-4.4a5.6 5.6 0 0 0-7 0zM4.2 10.3l1.9 2.4a9.5 9.5 0 0 1 11.8 0l1.9-2.4a12.6 12.6 0 0 0-15.6 0zM.4 5.5l1.9 2.4a15.6 15.6 0 0 1 19.4 0l1.9-2.4a18.6 18.6 0 0 0-23.2 0z"/></svg><svg viewBox="0 0 30 24"><rect x="1" y="5" width="24" height="14" rx="3" fill="none" stroke="#eef3e4" stroke-width="2"/><rect x="4" y="8" width="16" height="8" rx="1.5"/><rect x="26" y="9" width="3" height="6" rx="1"/></svg></span></div><div class="cam"></div><div class="gest"></div></div></div>
   </div>
   <script>
     const tl = gsap.timeline({ paused: true });
