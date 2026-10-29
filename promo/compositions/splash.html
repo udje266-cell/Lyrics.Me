@@ -1,0 +1,27 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; overflow: hidden; background: #131a11; }
+    .scrw { position: absolute; left: 0; top: 84px; width: 1080px; height: 1788px; }
+    .scr { position: absolute; inset: 0; overflow: hidden; background: #131a11; }
+    .scr > img { position: absolute; left: 0; top: 0; width: 1080px; height: auto; }
+    .stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1000px; overflow: hidden; }
+    .stage > img { position: absolute; left: 0; top: -200px; width: 1080px; height: auto; }
+    .tap { position: absolute; width: 0; height: 0; }
+    .tap i { position: absolute; left: -60px; top: -60px; width: 120px; height: 120px; border-radius: 50%; }
+    .tap .dot { background: rgba(255, 255, 255, 0.55); box-shadow: 0 0 0 3px rgba(0,0,0,.18); }
+    .tap .ring { background: rgba(255, 255, 255, 0.35); }
+  </style>
+  <div id="root" data-composition-id="splash" data-width="1080" data-height="1920">
+    <img id="sp-icon" class="clip" src="assets/icon.png" alt="" data-start="0" data-duration="2.19" style="position:absolute;left:390px;top:520px;width:300px;height:300px;border-radius:70px">
+    <img id="sp-word" class="clip" src="assets/logo-blanc.png" alt="Verso" data-start="0" data-duration="2.19" style="position:absolute;left:290px;top:300px;width:500px;height:auto">
+    <img id="sp-card" class="clip" src="assets/screens/carte-bandeau-square.png" alt="" data-start="0" data-duration="2.19" style="position:absolute;left:160px;top:520px;width:760px;height:760px;border-radius:32px">
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#sp-icon", {scale: 0.3, opacity: 0}, {scale: 1, opacity: 1, duration: 0.45, ease: "back.out(1.7)"}, 0);
+    tl.fromTo("#sp-word", {opacity: 0, y: 30}, {opacity: 1, y: 0, duration: 0.35, ease: "power3.out"}, 0.23);
+    tl.to("#sp-icon", {scale: 0.2, opacity: 0, duration: 0.3, ease: "power2.in"}, 0.87);
+    tl.fromTo("#sp-card", {scale: 0.3, opacity: 0, rotation: -6}, {scale: 1, opacity: 1, rotation: 0, duration: 0.5, ease: "back.out(1.5)"}, 1.02);
+    window.__timelines["splash"] = tl;
+  </script>
+</template>

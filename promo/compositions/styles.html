@@ -1,34 +1,56 @@
 <template>
   <style>
-    @font-face { font-family: "Space Grotesk"; font-weight: 700; src: url("assets/fonts/SpaceGrotesk-700-normal-latin.woff2") format("woff2"); }
-    @font-face { font-family: "Space Grotesk"; font-weight: 700; src: url("assets/fonts/SpaceGrotesk-700-normal-latin-ext.woff2") format("woff2"); unicode-range: U+0100-024F; }
-    #root { position: absolute; inset: 0; overflow: hidden; background: #131a11; font-family: "Space Grotesk", Inter, sans-serif; }
-    .phone { position: absolute; left: 190px; top: 250px; width: 700px; height: 900px; border-radius: 74px; padding: 14px; background: linear-gradient(145deg, #2c2f2b, #0b0c0b 45%, #1d1f1c); box-shadow: 0 0 0 2px #3a3d38 inset, 0 40px 120px rgba(0,0,0,.6); }
-    .phone .screen { position: relative; width: 672px; height: 872px; border-radius: 60px; overflow: hidden; background: #131a11; }
-    .phone .screen > img { position: absolute; left: 0; top: 54px; width: 672px; height: auto; transform-origin: 0 0; }
-    .phone .sb { position: absolute; left: 0; right: 0; top: 0; height: 54px; background: #131a11; display: flex; align-items: center; justify-content: space-between; padding: 0 34px 0 40px; color: #eef3e4; font-family: Inter, sans-serif; font-size: 22px; font-weight: 700; }
-    .phone .sb svg { height: 20px; width: auto; fill: #eef3e4; margin-left: 8px; }
-    .phone .cam { position: absolute; left: 50%; top: 14px; width: 26px; height: 26px; margin-left: -13px; border-radius: 50%; background: #050505; box-shadow: 0 0 0 3px #1a1a1a; }
-    .phone .gest { position: absolute; left: 50%; bottom: 10px; width: 180px; height: 7px; margin-left: -90px; border-radius: 4px; background: rgba(238,243,228,.85); }
-    .phone .btn-side { position: absolute; right: -5px; top: 190px; width: 6px; height: 120px; border-radius: 3px; background: #2a2c29; }
-    .claim { position: absolute; left: 90px; right: 90px; top: 172px; text-align: center; color: #cce988; font-size: 46px; font-weight: 700; letter-spacing: -0.02em; }
-    .card { position: absolute; border-radius: 28px; box-shadow: 0 40px 120px rgba(0,0,0,.6); }
-    
+    #root { position: absolute; inset: 0; overflow: hidden; background: #131a11; }
+    .scrw { position: absolute; left: 0; top: 84px; width: 1080px; height: 1788px; }
+    .scr { position: absolute; inset: 0; overflow: hidden; background: #131a11; }
+    .scr > img { position: absolute; left: 0; top: 0; width: 1080px; height: auto; }
+    .stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1000px; overflow: hidden; }
+    .stage > img { position: absolute; left: 0; top: -200px; width: 1080px; height: auto; }
+    .tap { position: absolute; width: 0; height: 0; }
+    .tap i { position: absolute; left: -60px; top: -60px; width: 120px; height: 120px; border-radius: 50%; }
+    .tap .dot { background: rgba(255, 255, 255, 0.55); box-shadow: 0 0 0 3px rgba(0,0,0,.18); }
+    .tap .ring { background: rgba(255, 255, 255, 0.35); }
   </style>
   <div id="root" data-composition-id="styles" data-width="1080" data-height="1920">
-    <div id="st-claim" class="clip claim" data-start="0.00" data-duration="4.29"><span>7 styles</span></div><div id="st-claim2" class="clip claim" data-start="4.29" data-duration="3.79"><span>Pochette, photo d'artiste ou la tienne</span></div><img id="st-c0" class="clip card" src="assets/screens/carte-bandeau-square.png" alt="" data-start="0.00" data-duration="1.69" style="left:115px;top:330px;width:850px;height:850px"><img id="st-c1" class="clip card" src="assets/screens/carte-vinyle-square.png" alt="" data-start="1.69" data-duration="0.65" style="left:115px;top:330px;width:850px;height:850px"><img id="st-c2" class="clip card" src="assets/screens/carte-editorial-square.png" alt="" data-start="2.34" data-duration="0.95" style="left:115px;top:330px;width:850px;height:850px"><img id="st-c3" class="clip card" src="assets/screens/carte-typo-square.png" alt="" data-start="3.29" data-duration="1.00" style="left:115px;top:330px;width:850px;height:850px"><img id="st-c4" class="clip card" src="assets/screens/carte-pochette-square.png" alt="" data-start="4.29" data-duration="1.40" style="left:115px;top:330px;width:850px;height:850px"><img id="st-c5" class="clip card" src="assets/screens/carte-minimal-square.png" alt="" data-start="5.69" data-duration="1.10" style="left:115px;top:330px;width:850px;height:850px"><img id="st-c6" class="clip card" src="assets/screens/carte-bandeau-square.png" alt="" data-start="6.79" data-duration="1.29" style="left:115px;top:330px;width:850px;height:850px">
+    <div id="st-base" class="clip scrw" data-start="0.00" data-duration="0.60" style="z-index:1" data-layout-allow-overflow><div id="st-base-in" class="scr"><img id="st-base-img" src="assets/screens/06-studio.png" alt=""></div></div><div id="st-style" class="clip scrw" data-start="0.35" data-duration="7.73" style="z-index:2" data-layout-allow-overflow><div id="st-style-in" class="scr"><img id="st-style-img" src="assets/screens/07-studio-style-full.png" alt=""><div id="st-style-stage" class="stage"><img id="st-style-stg" src="assets/screens/07-studio-style.png" alt=""></div></div></div><div id="st-t0" class="clip tap" data-start="0.10" data-duration="0.72" style="left:662px;top:1716px;z-index:30"><i id="st-t0-r" class="ring"></i><i id="st-t0-d" class="dot"></i></div><div id="st-t1" class="clip tap" data-start="0.90" data-duration="0.72" style="left:209px;top:683px;z-index:30"><i id="st-t1-r" class="ring"></i><i id="st-t1-d" class="dot"></i></div><img id="st-c0" class="clip" src="assets/screens/carte-bandeau-square.png" alt="" data-start="1.00" data-duration="0.69" style="position:absolute;left:84px;top:120px;width:912px;height:912px;z-index:8;border-radius:6px"><div id="st-t2" class="clip tap" data-start="1.59" data-duration="0.72" style="left:872px;top:1073px;z-index:30"><i id="st-t2-r" class="ring"></i><i id="st-t2-d" class="dot"></i></div><img id="st-c1" class="clip" src="assets/screens/carte-vinyle-square.png" alt="" data-start="1.69" data-duration="0.65" style="position:absolute;left:84px;top:120px;width:912px;height:912px;z-index:8;border-radius:6px"><div id="st-t3" class="clip tap" data-start="2.24" data-duration="0.72" style="left:872px;top:683px;z-index:30"><i id="st-t3-r" class="ring"></i><i id="st-t3-d" class="dot"></i></div><img id="st-c2" class="clip" src="assets/screens/carte-editorial-square.png" alt="" data-start="2.34" data-duration="0.95" style="position:absolute;left:84px;top:120px;width:912px;height:912px;z-index:8;border-radius:6px"><div id="st-t4" class="clip tap" data-start="3.19" data-duration="0.72" style="left:209px;top:1463px;z-index:30"><i id="st-t4-r" class="ring"></i><i id="st-t4-d" class="dot"></i></div><img id="st-c3" class="clip" src="assets/screens/carte-typo-square.png" alt="" data-start="3.29" data-duration="1.00" style="position:absolute;left:84px;top:120px;width:912px;height:912px;z-index:8;border-radius:6px"><div id="st-t5" class="clip tap" data-start="4.19" data-duration="0.72" style="left:209px;top:1073px;z-index:30"><i id="st-t5-r" class="ring"></i><i id="st-t5-d" class="dot"></i></div><img id="st-c4" class="clip" src="assets/screens/carte-pochette-square.png" alt="" data-start="4.29" data-duration="1.40" style="position:absolute;left:84px;top:120px;width:912px;height:912px;z-index:8;border-radius:6px"><div id="st-t6" class="clip tap" data-start="5.59" data-duration="0.72" style="left:541px;top:683px;z-index:30"><i id="st-t6-r" class="ring"></i><i id="st-t6-d" class="dot"></i></div><img id="st-c5" class="clip" src="assets/screens/carte-minimal-square.png" alt="" data-start="5.69" data-duration="1.10" style="position:absolute;left:84px;top:120px;width:912px;height:912px;z-index:8;border-radius:6px"><div id="st-t7" class="clip tap" data-start="6.69" data-duration="0.72" style="left:209px;top:683px;z-index:30"><i id="st-t7-r" class="ring"></i><i id="st-t7-d" class="dot"></i></div><img id="st-c6" class="clip" src="assets/screens/carte-bandeau-square.png" alt="" data-start="6.79" data-duration="1.29" style="position:absolute;left:84px;top:120px;width:912px;height:912px;z-index:8;border-radius:6px">
   </div>
   <script>
     const tl = gsap.timeline({ paused: true });
-    tl.fromTo("#st-claim span", {y: -20, opacity: 0}, {y: 0, opacity: 1, duration: 0.3, ease: "power3.out"}, 0.05);
-    tl.fromTo("#st-claim2 span", {y: -20, opacity: 0}, {y: 0, opacity: 1, duration: 0.3, ease: "power3.out"}, 4.34);
-    tl.fromTo("#st-c0", {scale: 0.86, rotation: -3}, {scale: 1, rotation: 0, duration: 0.28, ease: "back.out(1.6)"}, 0.00);
-    tl.fromTo("#st-c1", {scale: 0.86, rotation: 3}, {scale: 1, rotation: 0, duration: 0.28, ease: "back.out(1.6)"}, 1.69);
-    tl.fromTo("#st-c2", {scale: 0.86, rotation: -3}, {scale: 1, rotation: 0, duration: 0.28, ease: "back.out(1.6)"}, 2.34);
-    tl.fromTo("#st-c3", {scale: 0.86, rotation: 3}, {scale: 1, rotation: 0, duration: 0.28, ease: "back.out(1.6)"}, 3.29);
-    tl.fromTo("#st-c4", {scale: 0.86, rotation: -3}, {scale: 1, rotation: 0, duration: 0.28, ease: "back.out(1.6)"}, 4.29);
-    tl.fromTo("#st-c5", {scale: 0.86, rotation: 3}, {scale: 1, rotation: 0, duration: 0.28, ease: "back.out(1.6)"}, 5.69);
-    tl.fromTo("#st-c6", {scale: 0.86, rotation: -3}, {scale: 1, rotation: 0, duration: 0.28, ease: "back.out(1.6)"}, 6.79);
+    tl.fromTo("#st-t0-d", {scale: 0.4, opacity: 0}, {scale: 1, opacity: 1, duration: 0.08, ease: "power2.out"}, 0.15);
+    tl.fromTo("#st-t0-r", {scale: 0.3, opacity: 0.9}, {scale: 2.6, opacity: 0, duration: 0.5, ease: "power2.out"}, 0.15);
+    tl.to("#st-t0-d", {scale: 0.6, opacity: 0, duration: 0.14, ease: "power2.in"}, 0.27);
+    tl.fromTo("#st-style-in", {opacity: 0, scale: 0.92}, {opacity: 1, scale: 1, duration: 0.3, ease: "power2.out"}, 0.35);
+    tl.fromTo("#st-style-img", {y: 0}, {y: -1300, duration: 0.70, ease: "power3.out"}, 0.80);
+    tl.fromTo("#st-style-stage", {y: -1000}, {y: -1000, duration: 0.01}, 0.35);
+    tl.to("#st-style-stage", {y: 0, duration: 0.35, ease: "power3.out"}, 1.1);
+    tl.fromTo("#st-t1-d", {scale: 0.4, opacity: 0}, {scale: 1, opacity: 1, duration: 0.08, ease: "power2.out"}, 0.95);
+    tl.fromTo("#st-t1-r", {scale: 0.3, opacity: 0.9}, {scale: 2.6, opacity: 0, duration: 0.5, ease: "power2.out"}, 0.95);
+    tl.to("#st-t1-d", {scale: 0.6, opacity: 0, duration: 0.14, ease: "power2.in"}, 1.07);
+    tl.fromTo("#st-c0", {opacity: 0, scale: 0.94}, {opacity: 1, scale: 1, duration: 0.22, ease: "power2.out"}, 1.00);
+    tl.fromTo("#st-t2-d", {scale: 0.4, opacity: 0}, {scale: 1, opacity: 1, duration: 0.08, ease: "power2.out"}, 1.64);
+    tl.fromTo("#st-t2-r", {scale: 0.3, opacity: 0.9}, {scale: 2.6, opacity: 0, duration: 0.5, ease: "power2.out"}, 1.64);
+    tl.to("#st-t2-d", {scale: 0.6, opacity: 0, duration: 0.14, ease: "power2.in"}, 1.76);
+    tl.fromTo("#st-c1", {opacity: 0, scale: 0.94}, {opacity: 1, scale: 1, duration: 0.22, ease: "power2.out"}, 1.69);
+    tl.fromTo("#st-t3-d", {scale: 0.4, opacity: 0}, {scale: 1, opacity: 1, duration: 0.08, ease: "power2.out"}, 2.29);
+    tl.fromTo("#st-t3-r", {scale: 0.3, opacity: 0.9}, {scale: 2.6, opacity: 0, duration: 0.5, ease: "power2.out"}, 2.29);
+    tl.to("#st-t3-d", {scale: 0.6, opacity: 0, duration: 0.14, ease: "power2.in"}, 2.41);
+    tl.fromTo("#st-c2", {opacity: 0, scale: 0.94}, {opacity: 1, scale: 1, duration: 0.22, ease: "power2.out"}, 2.34);
+    tl.fromTo("#st-t4-d", {scale: 0.4, opacity: 0}, {scale: 1, opacity: 1, duration: 0.08, ease: "power2.out"}, 3.24);
+    tl.fromTo("#st-t4-r", {scale: 0.3, opacity: 0.9}, {scale: 2.6, opacity: 0, duration: 0.5, ease: "power2.out"}, 3.24);
+    tl.to("#st-t4-d", {scale: 0.6, opacity: 0, duration: 0.14, ease: "power2.in"}, 3.36);
+    tl.fromTo("#st-c3", {opacity: 0, scale: 0.94}, {opacity: 1, scale: 1, duration: 0.22, ease: "power2.out"}, 3.29);
+    tl.fromTo("#st-t5-d", {scale: 0.4, opacity: 0}, {scale: 1, opacity: 1, duration: 0.08, ease: "power2.out"}, 4.24);
+    tl.fromTo("#st-t5-r", {scale: 0.3, opacity: 0.9}, {scale: 2.6, opacity: 0, duration: 0.5, ease: "power2.out"}, 4.24);
+    tl.to("#st-t5-d", {scale: 0.6, opacity: 0, duration: 0.14, ease: "power2.in"}, 4.36);
+    tl.fromTo("#st-c4", {opacity: 0, scale: 0.94}, {opacity: 1, scale: 1, duration: 0.22, ease: "power2.out"}, 4.29);
+    tl.fromTo("#st-t6-d", {scale: 0.4, opacity: 0}, {scale: 1, opacity: 1, duration: 0.08, ease: "power2.out"}, 5.64);
+    tl.fromTo("#st-t6-r", {scale: 0.3, opacity: 0.9}, {scale: 2.6, opacity: 0, duration: 0.5, ease: "power2.out"}, 5.64);
+    tl.to("#st-t6-d", {scale: 0.6, opacity: 0, duration: 0.14, ease: "power2.in"}, 5.76);
+    tl.fromTo("#st-c5", {opacity: 0, scale: 0.94}, {opacity: 1, scale: 1, duration: 0.22, ease: "power2.out"}, 5.69);
+    tl.fromTo("#st-t7-d", {scale: 0.4, opacity: 0}, {scale: 1, opacity: 1, duration: 0.08, ease: "power2.out"}, 6.74);
+    tl.fromTo("#st-t7-r", {scale: 0.3, opacity: 0.9}, {scale: 2.6, opacity: 0, duration: 0.5, ease: "power2.out"}, 6.74);
+    tl.to("#st-t7-d", {scale: 0.6, opacity: 0, duration: 0.14, ease: "power2.in"}, 6.86);
+    tl.fromTo("#st-c6", {opacity: 0, scale: 0.94}, {opacity: 1, scale: 1, duration: 0.22, ease: "power2.out"}, 6.79);
     window.__timelines["styles"] = tl;
   </script>
 </template>

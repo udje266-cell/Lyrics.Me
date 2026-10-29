@@ -60,7 +60,7 @@ const RSS = `<?xml version="1.0"?><rss><channel>
 (async () => {
   fs.mkdirSync(OUT, { recursive: true });
   const b = await chromium.launch();
-  const ctx = await b.newContext({ viewport: { width: 360, height: 780 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true, colorScheme: 'dark' });
+  const ctx = await b.newContext({ viewport: { width: 360, height: 596 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true, colorScheme: 'dark' });
   await ctx.route('https://demo.verso/**', r => {
     const f = path.join(DEMO, path.basename(new URL(r.request().url()).pathname));
     if (fs.existsSync(f)) r.fulfill({ status: 200, contentType: 'image/jpeg', headers: { 'access-control-allow-origin': '*' }, body: fs.readFileSync(f) });
@@ -90,6 +90,21 @@ const RSS = `<?xml version="1.0"?><rss><channel>
   const p = await ctx.newPage();
   p.on('pageerror', e => console.log('ERR', e.message));
   const nav = async (h, w = 900) => { await p.evaluate(h => { location.hash = h; }, h); await p.waitForTimeout(w); };
+  const RECTS = {};
+  const rects = async (name, sels) => {
+    RECTS[name] = await p.evaluate(sels => {
+      const out = {};
+      for (const [k, sel] of Object.entries(sels)) {
+        let r = null;
+        if (sel.startsWith('word:')) {
+          const [, line, a, z] = sel.split(':');
+          const n = document.querySelector(`.ln[data-i="${line}"]`).firstChild; const rg = document.createRange(); rg.setStart(n, +a); rg.setEnd(n, +z); r = rg.getBoundingClientRect();
+        } else { const el = document.querySelector(sel); if (el) r = el.getBoundingClientRect(); }
+        if (r) out[k] = { x: r.x * 3, y: (r.y + scrollY) * 3, w: r.width * 3, h: r.height * 3, vy: r.y * 3 };
+      }
+      return out;
+    }, sels);
+  };
   const shot = async (name, full = false) => { await p.evaluate(full => { document.querySelectorAll('.toast').forEach(t => t.remove()); let st = document.getElementById('cap-full'); if (!st) { st = document.createElement('style'); st.id = 'cap-full'; document.head.append(st); } st.textContent = full ? '.nav,.search-fab{display:none!important}' : ''; }, full); await p.screenshot({ path: path.join(OUT, name + '.png'), fullPage: full }); console.log('capturé', name); };
 
   await p.goto(APP); await p.waitForTimeout(1200);
@@ -114,10 +129,17 @@ const RSS = `<?xml version="1.0"?><rss><channel>
   // Accueil : musique en cours, vers, actualités, tendances.
   await nav('#/profil', 300); await nav('#/', 3500);
   await shot('01-accueil');
+  await rects('01-accueil', { paroles: '#np-ly', loupe: '.search-fab', profil: '.nav a[data-nav=profile]', accueil: '.nav a[data-nav=home]' });
   await shot('01-accueil-full', true);
+  await rects('01-accueil-full', { news: '#news', trends: '#trends' });
   // Page du morceau.
   await nav('#/morceau/nuits', 1500);
   await shot('02-paroles');
+  await p.evaluate(() => document.getElementById('lyrics').scrollIntoView({ block: 'start' }));
+  await p.evaluate(() => window.scrollBy(0, -40));
+  await p.waitForTimeout(300);
+  await shot('02b-refrain');
+  await rects('02b-refrain', { mot: 'word:6:0:5' });
   // Sélection mot par mot dans le refrain.
   await p.evaluate(() => {
     const a = document.querySelector('.ln[data-i="6"]').firstChild, z = document.querySelector('.ln[data-i="7"]').firstChild;
@@ -129,14 +151,17 @@ const RSS = `<?xml version="1.0"?><rss><channel>
   await p.evaluate(() => window.scrollBy(0, -40));
   await p.waitForTimeout(300);
   await shot('03-selection');
+  await rects('03-selection', { creer: '#mkcard', mot: 'word:6:0:5', fin: 'word:7:20:28' });
   // Recherche à la loupe.
   await nav('#/recherche', 700);
   await p.fill('#sq', 'Nina'); await p.waitForSelector('.s-artists a'); await p.waitForTimeout(800);
   await p.evaluate(() => document.activeElement.blur());
   await shot('04-recherche');
+  await rects('04-recherche', { artiste: '.s-artists a' });
   // Page artiste.
   await nav('#/artiste/999', 3500);
   await shot('05-artiste');
+  await rects('05-artiste', { importer: '#imp-all' });
   await shot('05-artiste-full', true);
   // Studio : carte Bandeau sur une photo personnelle, mot mis en évidence.
   const cards = await p.evaluate(async () => {
@@ -174,13 +199,25 @@ const RSS = `<?xml version="1.0"?><rss><channel>
   });
   await nav('#/studio/' + cards[0], 2500);
   await shot('06-studio');
+  await rects('06-studio', { stage: '#stage', cv: '#cv', style: '[data-tab=style]', format: '[data-tab=format]', couleur: '#t-color', police: '#t-font', hl: '#t-hl' });
+  await shot('06-studio-full', true);
+  await rects('06-studio-full', { couleur: '#t-color', police: '#t-font', hl: '#t-hl', mots: '.card-box' });
   await p.click('[data-tab=style]'); await p.waitForTimeout(800);
   await shot('07-studio-style');
+  await shot('07-studio-style-full', true);
+  await rects('07-studio-style', { stage: '#stage', cv: '#cv', bandeau: '[data-tpl=bandeau]', minimal: '[data-tpl=minimal]', editorial: '[data-tpl=editorial]', pochette: '[data-tpl=pochette]', photo: '[data-tpl=photo]', vinyle: '[data-tpl=vinyle]', typo: '[data-tpl=typo]' });
   await p.click('[data-tab=format]'); await p.waitForTimeout(500);
   await shot('08-studio-format');
+  await shot('08-studio-format-full', true);
+  await rects('08-studio-format', { stage: '#stage', share: '#x-share', cv: '#cv', square: '[data-seg=format] [data-v=square]', portrait: '[data-seg=format] [data-v=portrait]', story: '[data-seg=format] [data-v=story]' });
+  await p.evaluate(() => document.getElementById('x-share').scrollIntoView({ block: 'center' })); await p.waitForTimeout(300);
+  await shot('08b-partager');
+  await rects('08b-partager', { partager: '#x-share' });
   // Profil.
   await nav('#/profil', 1500);
   await shot('09-profil');
+  await rects('09-profil', { grille: '.pf-grid', accueil: '.nav a[data-nav=home]' });
+  fs.writeFileSync(path.join(OUT, 'rects.json'), JSON.stringify(RECTS, null, 1));
 
   // Cartes exportées en haute définition (vrai moteur de rendu de Verso).
   const exports = await p.evaluate(async ids => {

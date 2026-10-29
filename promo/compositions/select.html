@@ -1,30 +1,31 @@
 <template>
   <style>
-    @font-face { font-family: "Space Grotesk"; font-weight: 700; src: url("assets/fonts/SpaceGrotesk-700-normal-latin.woff2") format("woff2"); }
-    @font-face { font-family: "Space Grotesk"; font-weight: 700; src: url("assets/fonts/SpaceGrotesk-700-normal-latin-ext.woff2") format("woff2"); unicode-range: U+0100-024F; }
-    #root { position: absolute; inset: 0; overflow: hidden; background: #131a11; font-family: "Space Grotesk", Inter, sans-serif; }
-    .phone { position: absolute; left: 190px; top: 250px; width: 700px; height: 900px; border-radius: 74px; padding: 14px; background: linear-gradient(145deg, #2c2f2b, #0b0c0b 45%, #1d1f1c); box-shadow: 0 0 0 2px #3a3d38 inset, 0 40px 120px rgba(0,0,0,.6); }
-    .phone .screen { position: relative; width: 672px; height: 872px; border-radius: 60px; overflow: hidden; background: #131a11; }
-    .phone .screen > img { position: absolute; left: 0; top: 54px; width: 672px; height: auto; transform-origin: 0 0; }
-    .phone .sb { position: absolute; left: 0; right: 0; top: 0; height: 54px; background: #131a11; display: flex; align-items: center; justify-content: space-between; padding: 0 34px 0 40px; color: #eef3e4; font-family: Inter, sans-serif; font-size: 22px; font-weight: 700; }
-    .phone .sb svg { height: 20px; width: auto; fill: #eef3e4; margin-left: 8px; }
-    .phone .cam { position: absolute; left: 50%; top: 14px; width: 26px; height: 26px; margin-left: -13px; border-radius: 50%; background: #050505; box-shadow: 0 0 0 3px #1a1a1a; }
-    .phone .gest { position: absolute; left: 50%; bottom: 10px; width: 180px; height: 7px; margin-left: -90px; border-radius: 4px; background: rgba(238,243,228,.85); }
-    .phone .btn-side { position: absolute; right: -5px; top: 190px; width: 6px; height: 120px; border-radius: 3px; background: #2a2c29; }
-    .claim { position: absolute; left: 90px; right: 90px; top: 172px; text-align: center; color: #cce988; font-size: 46px; font-weight: 700; letter-spacing: -0.02em; }
-    .card { position: absolute; border-radius: 28px; box-shadow: 0 40px 120px rgba(0,0,0,.6); }
-    
+    #root { position: absolute; inset: 0; overflow: hidden; background: #131a11; }
+    .scrw { position: absolute; left: 0; top: 84px; width: 1080px; height: 1788px; }
+    .scr { position: absolute; inset: 0; overflow: hidden; background: #131a11; }
+    .scr > img { position: absolute; left: 0; top: 0; width: 1080px; height: auto; }
+    .stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1000px; overflow: hidden; }
+    .stage > img { position: absolute; left: 0; top: -200px; width: 1080px; height: auto; }
+    .tap { position: absolute; width: 0; height: 0; }
+    .tap i { position: absolute; left: -60px; top: -60px; width: 120px; height: 120px; border-radius: 50%; }
+    .tap .dot { background: rgba(255, 255, 255, 0.55); box-shadow: 0 0 0 3px rgba(0,0,0,.18); }
+    .tap .ring { background: rgba(255, 255, 255, 0.35); }
   </style>
   <div id="root" data-composition-id="select" data-width="1080" data-height="1920">
-    <div id="se-claim" class="clip claim" data-start="0.00" data-duration="5.60"><span>La magie : mot par mot</span></div><div id="se-sel" class="clip phone" data-start="0.00" data-duration="4.83" data-layout-allow-overflow><div class="btn-side"></div><div class="screen"><img id="se-sel-img" src="assets/screens/03-selection.png" alt="" ><div class="sb"><span>20:41</span><span><svg viewBox="0 0 24 24"><path d="M2 22h3v-4H2zm5 0h3v-8H7zm5 0h3V9h-3zm5 0h3V3h-3z"/></svg><svg viewBox="0 0 24 24"><path d="M12 20l3.5-4.4a5.6 5.6 0 0 0-7 0zM4.2 10.3l1.9 2.4a9.5 9.5 0 0 1 11.8 0l1.9-2.4a12.6 12.6 0 0 0-15.6 0zM.4 5.5l1.9 2.4a15.6 15.6 0 0 1 19.4 0l1.9-2.4a18.6 18.6 0 0 0-23.2 0z"/></svg><svg viewBox="0 0 30 24"><rect x="1" y="5" width="24" height="14" rx="3" fill="none" stroke="#eef3e4" stroke-width="2"/><rect x="4" y="8" width="16" height="8" rx="1.5"/><rect x="26" y="9" width="3" height="6" rx="1"/></svg></span></div><div class="cam"></div><div class="gest"></div></div></div><div id="se-studio" class="clip phone" data-start="4.83" data-duration="0.77" data-layout-allow-overflow><div class="btn-side"></div><div class="screen"><img id="se-studio-img" src="assets/screens/06-studio.png" alt="" ><div class="sb"><span>20:41</span><span><svg viewBox="0 0 24 24"><path d="M2 22h3v-4H2zm5 0h3v-8H7zm5 0h3V9h-3zm5 0h3V3h-3z"/></svg><svg viewBox="0 0 24 24"><path d="M12 20l3.5-4.4a5.6 5.6 0 0 0-7 0zM4.2 10.3l1.9 2.4a9.5 9.5 0 0 1 11.8 0l1.9-2.4a12.6 12.6 0 0 0-15.6 0zM.4 5.5l1.9 2.4a15.6 15.6 0 0 1 19.4 0l1.9-2.4a18.6 18.6 0 0 0-23.2 0z"/></svg><svg viewBox="0 0 30 24"><rect x="1" y="5" width="24" height="14" rx="3" fill="none" stroke="#eef3e4" stroke-width="2"/><rect x="4" y="8" width="16" height="8" rx="1.5"/><rect x="26" y="9" width="3" height="6" rx="1"/></svg></span></div><div class="cam"></div><div class="gest"></div></div></div>
+    <div id="se-ref" class="clip scrw" data-start="0.00" data-duration="3.49" style="z-index:1" data-layout-allow-overflow><div id="se-ref-in" class="scr"><img id="se-ref-img" src="assets/screens/02b-refrain.png" alt=""></div></div><div id="se-sel" class="clip scrw" data-start="3.29" data-duration="1.80" style="z-index:2" data-layout-allow-overflow><div id="se-sel-in" class="scr"><img id="se-sel-img" src="assets/screens/03-selection.png" alt=""></div></div><div id="se-studio" class="clip scrw" data-start="4.79" data-duration="0.81" style="z-index:3" data-layout-allow-overflow><div id="se-studio-in" class="scr"><img id="se-studio-img" src="assets/screens/06-studio.png" alt=""></div></div><div id="se-t1" class="clip tap" data-start="1.74" data-duration="2.45" style="left:115px;top:1062px;z-index:30"><i id="se-t1-r" class="ring"></i><i id="se-t1-d" class="dot"></i></div><div id="se-t2" class="clip tap" data-start="4.54" data-duration="0.72" style="left:281px;top:1533px;z-index:30"><i id="se-t2-r" class="ring"></i><i id="se-t2-d" class="dot"></i></div>
   </div>
   <script>
     const tl = gsap.timeline({ paused: true });
-    tl.fromTo("#se-claim span", {y: -20, opacity: 0}, {y: 0, opacity: 1, duration: 0.3, ease: "power3.out"}, 0.05);
-    tl.fromTo("#se-sel", {y: 80, opacity: 0}, {y: 0, opacity: 1, duration: 0.4, ease: "power3.out"}, 0);
-    tl.fromTo("#se-sel-img", {scale: 1, x: 0, y: 0}, {scale: 1.55, x: -20, y: -330, duration: 0.6, ease: "power2.inOut"}, 1.79);
-    tl.to("#se-sel-img", {scale: 1.35, x: -10, y: -620, duration: 0.6, ease: "power2.inOut"}, 4.29);
-    tl.fromTo("#se-studio", {scale: 0.85, opacity: 0}, {scale: 1, opacity: 1, duration: 0.4, ease: "back.out(1.3)"}, 4.83);
+    tl.fromTo("#se-ref-in", {opacity: 0, scale: 0.92}, {opacity: 1, scale: 1, duration: 0.3, ease: "power2.out"}, 0.00);
+    tl.fromTo("#se-t1-d", {scale: 0.4, opacity: 0}, {scale: 1, opacity: 1, duration: 0.08, ease: "power2.out"}, 1.79);
+    tl.fromTo("#se-t1-r", {scale: 0.3, opacity: 0.9}, {scale: 2.6, opacity: 0, duration: 0.5, ease: "power2.out"}, 1.79);
+    tl.fromTo("#se-t1-d", {x: 0, y: 0}, {x: 544, y: 176, duration: 0.90, ease: "power2.inOut"}, 2.99);
+    tl.to("#se-t1-d", {scale: 0.6, opacity: 0, duration: 0.14, ease: "power2.in"}, 3.94);
+    tl.fromTo("#se-sel-in", {opacity: 0}, {opacity: 1, duration: 0.6, ease: "power1.inOut"}, 3.29);
+    tl.fromTo("#se-t2-d", {scale: 0.4, opacity: 0}, {scale: 1, opacity: 1, duration: 0.08, ease: "power2.out"}, 4.59);
+    tl.fromTo("#se-t2-r", {scale: 0.3, opacity: 0.9}, {scale: 2.6, opacity: 0, duration: 0.5, ease: "power2.out"}, 4.59);
+    tl.to("#se-t2-d", {scale: 0.6, opacity: 0, duration: 0.14, ease: "power2.in"}, 4.71);
+    tl.fromTo("#se-studio-in", {clipPath: "inset(1359px 576px 249px 57px round 60px)"}, {clipPath: "inset(0px 0px 0px 0px round 0px)", duration: 0.5, ease: "power3.inOut"}, 4.79);
     window.__timelines["select"] = tl;
   </script>
 </template>
