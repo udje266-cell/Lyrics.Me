@@ -32,6 +32,10 @@ python3 -m http.server 8080
 # puis ouvrir http://localhost:8080
 ```
 
+### Adresse en ligne (GitHub Pages)
+
+Une fois GitHub Pages activé (Settings → Pages → « Deploy from a branch » → branche `ccr-73841f22-0i93p9`, dossier `/ (root)`) : **https://udje266-cell.github.io/Lyrics.Me/**
+
 ### L'utiliser sur votre téléphone
 
 L'installation (PWA) et le service worker exigent **HTTPS** (sauf `localhost`). Options gratuites, à choisir quand vous le souhaitez — rien n'a été publié :
