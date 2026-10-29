@@ -16,6 +16,7 @@ index.html  manifest.webmanifest  sw.js
 css/styles.css  css/fonts.css  fonts/  icons/
 js/app.js      écrans : accueil, bibliothèque, ajout, morceau, galerie, réglages
 js/studio.js   studio de création, export, partage
+js/albums.js   albums : formulaire, page d'album, rattachement des morceaux
 js/render.js   rendu des cartes, modèles, palette, textures
 js/sources.js  sources externes de paroles
 js/db.js       IndexedDB, sauvegarde/restauration
@@ -60,6 +61,7 @@ Aucune clé secrète n'est utilisée. Une source nécessitant une clé devra pas
 ## Fonctionnalités réalisées
 
 - **Ajout** : formulaire manuel complet (titre, artiste, invités, album, paroles, pochette, langue, collection, étiquettes, lien d'origine, note), import `.txt` (UTF-8 ou Windows-1252), recherche LRCLIB avec choix de version (titre, artiste, album, durée, source) puis vérification, import depuis un lien LRCLIB, explication claire pour les liens non pris en charge. Structure conservée (paragraphes, [Refrain]…). Détection des doublons probables (titre + artiste, sans tenir compte des accents/majuscules/« œ »).
+- **Albums** : saisie manuelle d'un album (titre, artiste, année, langue, collection, étiquettes, lien, note, pochette depuis la galerie ou « 🎵 Trouver la pochette ») avec ses morceaux et leurs paroles (collées, un .txt par morceau, ou plusieurs .txt d'un coup : le nom du fichier devient le titre). Page d'album avec la liste des pistes, ajout d'un morceau prérempli, modification (ordre des pistes, pochette propagée aux morceaux), suppression de l'album seul ou avec ses morceaux (corbeille). Un morceau dont l'album existe déjà y est rattaché automatiquement et reprend sa pochette. Vue « 💿 Albums » dans la bibliothèque.
 - **Bibliothèque** : recherche plein texte (titre, artiste, album, paroles, avec extrait surligné), tri date/titre/artiste, filtres langue/collection/étiquette/favoris, collections et étiquettes libres, favoris, modification, corbeille avec annulation immédiate, restauration et suppression définitive.
 - **Lecture** : pochette, infos, lien source, note, taille de texte réglable (mémorisée), mode lecture confortable, cartes déjà créées pour ce morceau.
 - **Sélection** : toucher pour (dé)sélectionner, appui long ou bouton « Plage » pour une plage, passages éloignés, séparateur « … » activable, aperçu immédiat, effacer, passages favoris avec note.

@@ -1,7 +1,7 @@
 // Stockage local (IndexedDB). Toutes les données restent dans ce navigateur, sur cet appareil.
 const DB_NAME = 'verso';
-const DB_VERSION = 1;
-export const STORES = ['songs', 'passages', 'cards', 'templates', 'settings'];
+const DB_VERSION = 2;
+export const STORES = ['songs', 'albums', 'passages', 'cards', 'templates', 'settings'];
 
 let dbPromise = null;
 

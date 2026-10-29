@@ -2,6 +2,7 @@ import { db, uid, exportBackup, importBackup } from './db.js';
 import { searchLyrics, importFromUrl, findArtwork, fetchImage } from './sources.js';
 import { compressImage } from './render.js';
 import { mountStudio, newCard } from './studio.js';
+import { renderAlbumForm, renderAlbum, attachAlbum, liveAlbums, albumRow } from './albums.js';
 
 // --- Utilitaires ----------------------------------------------------------
 
@@ -105,7 +106,10 @@ let cleanup = null;
 const routes = [
   [/^\/?$/, renderHome, 'home'],
   [/^\/bibliotheque$/, renderLibrary, 'library'],
+  [/^\/ajouter\/album$/, () => renderAlbumForm(), 'add'],
   [/^\/ajouter(?:\/(manuel|recherche|lien))?$/, renderAdd, 'add'],
+  [/^\/album\/([\w]+)$/, renderAlbum, 'library'],
+  [/^\/album\/([\w]+)\/modifier$/, renderAlbumForm, 'library'],
   [/^\/morceau\/([\w]+)$/, renderSong, 'library'],
   [/^\/morceau\/([\w]+)\/modifier$/, renderEdit, 'library'],
   [/^\/studio\/([\w]+)$/, (id) => mountStudio(view, id), 'gallery'],
@@ -152,6 +156,7 @@ async function renderHome() {
       <p class="muted" style="margin:0">Vos paroles préférées, en cartes. ${all.length} morceau${all.length > 1 ? 'x' : ''} · ${cards.filter(c => !c.draft).length} création${cards.filter(c => !c.draft).length > 1 ? 's' : ''}</p>
       <div class="quick">
         <a href="#/ajouter/manuel"><b>＋</b>Coller des paroles</a>
+        <a href="#/ajouter/album"><b>💿</b>Ajouter un album</a>
         <a href="#/ajouter/recherche"><b>⌕</b>Rechercher</a>
         <a href="#/ajouter/lien"><b>↗</b>Depuis un lien</a>
       </div>
@@ -187,7 +192,7 @@ function bindFavs() {
 
 // --- Bibliothèque ---------------------------------------------------------
 
-const lib = { q: '', sort: 'date', lang: '', collection: '', tag: '', fav: false, trash: false };
+const lib = { q: '', sort: 'date', lang: '', collection: '', tag: '', fav: false, trash: false, albums: false };
 
 async function renderLibrary() {
   const all = await songs();
@@ -200,6 +205,7 @@ async function renderLibrary() {
     <div class="page-head"><h1>Ma bibliothèque</h1><a class="btn primary" href="#/ajouter">＋ Ajouter</a></div>
     <div class="field"><input type="search" id="q" placeholder="Titre, artiste, album ou phrase des paroles…" value="${esc(lib.q)}" autocomplete="off"></div>
     <div class="chips" style="margin-bottom:8px">
+      <button class="chip ${lib.albums ? 'on' : ''}" id="f-albums">💿 Albums</button>
       <button class="chip ${lib.fav ? 'on' : ''}" id="f-fav">★ Favoris</button>
       ${cols.map(c => `<button class="chip ${lib.collection === c ? 'on' : ''}" data-col="${esc(c)}">${esc(c)}</button>`).join('')}
     </div>
@@ -213,8 +219,15 @@ async function renderLibrary() {
     <ul class="songs" id="list"></ul>`;
   $('#sort').value = lib.sort;
 
+  const albums = await liveAlbums();
   const draw = () => {
     const q = norm(lib.q);
+    if (lib.albums) {
+      const list = albums.filter(a => !q || norm([a.title, a.artist, a.year].join(' ')).includes(q)).sort((a, b) => lib.sort === 'title' ? a.title.localeCompare(b.title, 'fr') : lib.sort === 'artist' ? a.artist.localeCompare(b.artist, 'fr') : b.createdAt - a.createdAt);
+      $('#count').textContent = `${list.length} album${list.length > 1 ? 's' : ''}`;
+      $('#list').innerHTML = list.map(a => albumRow(a, live.filter(x => x.albumId === a.id).length)).join('') || `<div class="empty">Aucun album.<br><br><a class="btn primary" href="#/ajouter/album">Ajouter un album</a></div>`;
+      return;
+    }
     let list = lib.trash ? all.filter(s => s.deletedAt) : live;
     if (!lib.trash) {
       if (lib.fav) list = list.filter(s => s.favorite);
@@ -259,7 +272,8 @@ async function renderLibrary() {
   $('#sort').onchange = e => { lib.sort = e.target.value; draw(); };
   if ($('#lang')) $('#lang').onchange = e => { lib.lang = e.target.value; draw(); };
   if ($('#tag')) $('#tag').onchange = e => { lib.tag = e.target.value; draw(); };
-  $('#f-fav').onclick = () => { lib.fav = !lib.fav; renderLibrary(); };
+  $('#f-fav').onclick = () => { lib.fav = !lib.fav; lib.albums = false; renderLibrary(); };
+  $('#f-albums').onclick = () => { lib.albums = !lib.albums; renderLibrary(); };
   $('#f-trash').onclick = () => { lib.trash = !lib.trash; renderLibrary(); };
   $$('[data-col]').forEach(b => b.onclick = () => { lib.collection = lib.collection === b.dataset.col ? '' : b.dataset.col; renderLibrary(); });
 }
@@ -268,6 +282,7 @@ async function renderLibrary() {
 
 async function songForm(song, { submitLabel, intro = '' } = {}) {
   const live = await liveSongs();
+  const albums = await liveAlbums();
   const cols = [...new Set(live.map(s => s.collection).filter(Boolean).concat(['Amour', 'Gospel', 'Rap ivoirien', 'Motivation', 'Nostalgie']))];
   const tags = [...new Set(live.flatMap(s => s.tags || []))];
   return `${intro}
@@ -276,7 +291,8 @@ async function songForm(song, { submitLabel, intro = '' } = {}) {
       <div><label for="f-title">Titre *</label><input id="f-title" required value="${esc(song.title)}"></div>
       <div><label for="f-artist">Artiste *</label><input id="f-artist" required value="${esc(song.artist)}"></div>
       <div><label for="f-feat">Artistes invités</label><input id="f-feat" value="${esc(song.featuring)}" placeholder="Séparés par des virgules"></div>
-      <div><label for="f-album">Album</label><input id="f-album" value="${esc(song.album)}"></div>
+      <div><label for="f-album">Album</label><input id="f-album" list="dl-album" value="${esc(song.album)}">
+        <datalist id="dl-album">${albums.map(a => `<option value="${esc(a.title)}">${esc(a.artist)}</option>`).join('')}</datalist></div>
     </div>
     <div>
       <div class="row spread"><label for="f-lyrics">Paroles *</label>
@@ -339,6 +355,7 @@ function bindSongForm(song, onSaved) {
       createdAt: song.createdAt || now, updatedAt: now,
     };
     if (!s.lyrics.trim()) { toast('Les paroles sont vides.', { err: true }); return; }
+    await attachAlbum(s);
     const dup = (await liveSongs()).find(o => o.id !== s.id && norm(o.title) === norm(s.title) && norm(o.artist) === norm(s.artist));
     if (dup && !await confirmDialog(`« ${dup.title} » de ${dup.artist} est déjà dans votre bibliothèque. L'ajouter quand même ?`, 'Ajouter quand même')) return;
     await safe(() => db.put('songs', s));
@@ -348,7 +365,7 @@ function bindSongForm(song, onSaved) {
 }
 
 async function renderAdd(mode = 'manuel') {
-  const tabs = `<div class="seg" style="margin-bottom:18px">${[['manuel', 'Manuel'], ['recherche', 'Recherche'], ['lien', 'Lien']].map(([k, l]) => `<button data-mode="${k}" class="${mode === k ? 'on' : ''}">${l}</button>`).join('')}</div>`;
+  const tabs = `<div class="seg" style="margin-bottom:18px">${[['manuel', 'Morceau'], ['album', 'Album'], ['recherche', 'Recherche'], ['lien', 'Lien']].map(([k, l]) => `<button data-mode="${k}" class="${mode === k ? 'on' : ''}">${l}</button>`).join('')}</div>`;
   view.innerHTML = `<h1>Ajouter un morceau</h1>${tabs}<div id="addbody"></div>`;
   $$('[data-mode]').forEach(b => b.onclick = () => go('#/ajouter/' + b.dataset.mode));
   const body = $('#addbody');
@@ -359,7 +376,11 @@ async function renderAdd(mode = 'manuel') {
   const review = (r) => showForm({ title: r.title, artist: r.artist, album: r.album, lyrics: r.lyrics, sourceUrl: r.sourceUrl, sourceName: r.sourceName },
     `<div class="notice" style="margin-bottom:14px">Paroles fournies par <b>${esc(r.sourceName)}</b> (base collaborative). Vérifiez et corrigez le texte avant de l'ajouter : ce n'est pas forcément la version officielle de l'artiste. Vous pouvez remplacer le lien par celui de la publication d'origine.</div>`);
 
-  if (mode === 'manuel') return showForm({});
+  if (mode === 'manuel') {
+    let pre = {};
+    try { pre = JSON.parse(sessionStorage.getItem('verso-prefill') || '{}'); sessionStorage.removeItem('verso-prefill'); } catch {}
+    return showForm(pre, pre.album ? `<div class="notice" style="margin-bottom:14px">Nouveau morceau de l'album <b>${esc(pre.album)}</b> (piste ${pre.trackNo}).</div>` : '');
+  }
   if (mode === 'recherche') {
     body.innerHTML = `<form id="sform" class="stack"><div class="grid2"><div><label for="s-title">Titre</label><input id="s-title"></div><div><label for="s-artist">Artiste</label><input id="s-artist"></div></div>
       <button class="primary">Rechercher</button><p class="small muted">Source : LRCLIB (lrclib.net), base de paroles libre et gratuite, sans compte. Nécessite une connexion internet.</p></form><div id="results"></div>`;
@@ -433,7 +454,7 @@ async function renderSong(id) {
   view.innerHTML = `
     <div class="song-head">${coverHtml(s)}<div style="min-width:0">
       <h1 style="margin-bottom:4px">${esc(s.title)}</h1>
-      <div class="muted">${esc(s.artist)}${s.featuring ? ' feat. ' + esc(s.featuring) : ''}${s.album ? ' · ' + esc(s.album) : ''}</div>
+      <div class="muted">${esc(s.artist)}${s.featuring ? ' feat. ' + esc(s.featuring) : ''}${s.album ? ' · ' + (s.albumId ? `<a href="#/album/${s.albumId}">💿 ${esc(s.album)}</a>` : esc(s.album)) : ''}</div>
       <div class="row small muted" style="margin-top:6px">${s.collection ? `<span class="tag">${esc(s.collection)}</span>` : ''}${(s.tags || []).map(t => `<span class="tag">#${esc(t)}</span>`).join('')}${s.lang ? `<span>${esc(s.lang)}</span>` : ''}</div>
     </div></div>
     <div class="row" style="margin-bottom:14px">
@@ -549,17 +570,17 @@ async function renderSettings() {
   const est = navigator.storage && navigator.storage.estimate ? await navigator.storage.estimate().catch(() => null) : null;
   const persisted = navigator.storage && navigator.storage.persisted ? await navigator.storage.persisted().catch(() => false) : false;
   const counts = {};
-  for (const s of ['songs', 'cards', 'passages', 'templates']) counts[s] = (await db.all(s)).length;
+  for (const s of ['songs', 'albums', 'cards', 'passages', 'templates']) counts[s] = (await db.all(s)).length;
   const mb = b => (b / 1048576).toFixed(1).replace('.', ',') + ' Mo';
   view.innerHTML = `<h1>Réglages</h1>
     <section class="card-box"><h3>Apparence</h3><div class="seg" id="theme">${[['auto', 'Automatique'], ['dark', 'Sombre'], ['light', 'Clair']].map(([k, l]) => `<button data-t="${k}" class="${theme === k ? 'on' : ''}">${l}</button>`).join('')}</div>
       <div class="field" style="margin-top:14px"><label for="sig">Signature par défaut sur les cartes</label><input id="sig" value="${esc(signature)}" placeholder="Votre pseudonyme"></div></section>
     <section class="card-box"><h3>Mes données</h3>
       <div class="notice">Vos données sont enregistrées <b>uniquement sur cet appareil</b>, dans ce navigateur. Elles ne sont envoyées nulle part et ne sont <b>pas synchronisées</b> avec vos autres appareils. Exportez régulièrement une sauvegarde pour ne rien perdre (changement de téléphone, effacement des données du navigateur).</div>
-      <p class="small">${counts.songs} morceau(x) · ${counts.cards} carte(s) · ${counts.passages} passage(s) · ${counts.templates} modèle(s) personnel(s)${est ? `<br>Espace utilisé : ${mb(est.usage || 0)}${est.quota ? ' sur ' + mb(est.quota) + ' disponibles' : ''}` : ''}<br>
+      <p class="small">${counts.songs} morceau(x) · ${counts.albums} album(s) · ${counts.cards} carte(s) · ${counts.passages} passage(s) · ${counts.templates} modèle(s) personnel(s)${est ? `<br>Espace utilisé : ${mb(est.usage || 0)}${est.quota ? ' sur ' + mb(est.quota) + ' disponibles' : ''}` : ''}<br>
       Stockage protégé contre le nettoyage automatique : <b>${persisted ? 'oui' : 'non'}</b> ${persisted ? '' : '<button class="chip" id="persist">Demander la protection</button>'}</p>
       <div class="row"><button class="primary" id="backup">Exporter une sauvegarde</button><label class="btn" style="margin:0;color:var(--text)">Restaurer une sauvegarde<input type="file" id="restore" accept=".json,application/json" hidden></label></div>
-      <p class="small muted">La sauvegarde (.json) contient les paroles, notes, favoris, collections, passages, cartes, leurs réglages et leurs images. La restauration fusionne sans créer de doublons : un élément déjà présent n'est remplacé que par une version plus récente.</p></section>
+      <p class="small muted">La sauvegarde (.json) contient les albums, paroles, notes, favoris, collections, passages, cartes, leurs réglages et leurs images. La restauration fusionne sans créer de doublons : un élément déjà présent n'est remplacé que par une version plus récente.</p></section>
     <section class="card-box"><h3>Sources de paroles</h3>
       <p class="small"><b>LRCLIB</b> (lrclib.net) — active. Gratuite, sans compte ni clé. Fournit les paroles complètes contribuées par sa communauté : à vérifier avant ajout. Recherche par titre et artiste, import depuis un lien LRCLIB.</p>
       <p class="small muted">Genius, Musixmatch et Spotify ne sont pas branchés : l'API publique de Genius ne fournit pas les paroles ; Musixmatch ne donne gratuitement que 30 % du texte et exige une clé et un contrat commercial pour le texte complet. Toute autre page web : collez le texte, le lien est conservé comme source.</p></section>
