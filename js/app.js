@@ -92,7 +92,21 @@ const coverHtml = (s, cls = 'cover') => s.cover
 const PH_TINTS = ['#4f7a2a', '#0f5c6e', '#b23a7a', '#8a1f12', '#123a7a', '#6b4b2a', '#4a1f6b'];
 function placeholderTint(str) { let h = 0; for (const c of String(str)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return PH_TINTS[h % PH_TINTS.length]; }
 
+// Dans l'application Android (APK), l'enregistrement et le partage passent par le téléphone.
+export const android = window.VersoAndroid || null;
+export async function blobToBase64(blob) {
+  const buf = new Uint8Array(await blob.arrayBuffer());
+  let bin = '';
+  for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+export async function nativeFile(blob, name, share) {
+  const r = android[share ? 'shareFile' : 'saveFile'](name, blob.type || 'application/octet-stream', await blobToBase64(blob));
+  if (String(r).startsWith('error:')) throw new Error('Enregistrement impossible : ' + r.slice(6));
+}
+
 export function download(blob, name) {
+  if (android) { nativeFile(blob, name, false).catch(e => toast(e.message, { err: true })); return; }
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = name;
@@ -672,6 +686,6 @@ window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); instal
 
 // --- Démarrage ------------------------------------------------------------
 
-if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator && location.protocol !== 'file:' && !android) navigator.serviceWorker.register('sw.js').catch(() => {});
 if (navigator.storage && navigator.storage.persist) navigator.storage.persisted().then(p => { if (!p) navigator.storage.persist().catch(() => {}); });
 route();

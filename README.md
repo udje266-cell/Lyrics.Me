@@ -36,6 +36,10 @@ python3 -m http.server 8080
 
 **https://udje266-cell.github.io/Lyrics.Me/** — publiée depuis la branche `ccr-73841f22-0i93p9`, dossier `/ (root)` (Settings → Pages). Chaque envoi sur cette branche met le site à jour.
 
+### Application Android (APK)
+
+Téléchargement direct : **https://udje266-cell.github.io/Lyrics.Me/dist/Verso.apk** (ouvrir le fichier sur le téléphone, autoriser l'installation depuis cette source). Code et compilation : `android/README.md`.
+
 ### L'utiliser sur votre téléphone
 
 L'installation (PWA) et le service worker exigent **HTTPS** (sauf `localhost`). Options gratuites, à choisir quand vous le souhaitez — rien n'a été publié :

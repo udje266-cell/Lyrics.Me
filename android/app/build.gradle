@@ -1,0 +1,39 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'me.lyrics.verso'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'me.lyrics.verso'
+        minSdk 26
+        targetSdk 35
+        versionCode 1
+        versionName '1.0'
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            // Signature : voir android/README.md (fichier de clé hors du dépôt).
+            if (System.getenv('VERSO_KEYSTORE')) {
+                signingConfig signingConfigs.create('verso') {
+                    storeFile file(System.getenv('VERSO_KEYSTORE'))
+                    storePassword System.getenv('VERSO_KEYSTORE_PASSWORD')
+                    keyAlias 'verso'
+                    keyPassword System.getenv('VERSO_KEYSTORE_PASSWORD')
+                }
+            }
+        }
+    }
+    lint { checkReleaseBuilds false; abortOnError false }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
+
+// Copie l'application web (racine du dépôt) dans les ressources de l'APK.
+tasks.register('copyWebApp', Copy) {
+    from(rootProject.file('..')) {
+        include 'index.html', 'manifest.webmanifest', 'css/**', 'js/**', 'fonts/**', 'icons/**'
+    }
+    into layout.buildDirectory.dir('webassets/www')
+}
+android.sourceSets.main.assets.srcDirs += layout.buildDirectory.dir('webassets').get().asFile
+preBuild.dependsOn copyWebApp

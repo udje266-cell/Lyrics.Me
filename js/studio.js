@@ -1,7 +1,7 @@
 import { db, uid } from './db.js';
 import { findArtwork, fetchImage } from './sources.js';
 import { FORMATS, FONTS, TEMPLATES, TEXTURES, AMBIANCES, fontById, templatePreset, renderCard, ensureFonts, blobToBitmap, extractPalette, compressImage, splitExcerpt } from './render.js';
-import { esc, toast, safe, go, openDialog, confirmDialog, download, pickArtwork } from './app.js';
+import { esc, toast, safe, go, openDialog, confirmDialog, download, pickArtwork, android, nativeFile } from './app.js';
 
 const clone = o => JSON.parse(JSON.stringify(o));
 
@@ -46,6 +46,15 @@ async function makeThumb(card, imgs) {
 }
 
 async function shareOrDownload(files) {
+  if (android) {
+    // Une seule image : feuille de partage Android ; plusieurs : enregistrées dans la galerie.
+    try {
+      if (files.length === 1) { await nativeFile(files[0], files[0].name, true); return 'shared'; }
+      for (const f of files) await nativeFile(f, f.name, false);
+      toast(`${files.length} images enregistrées dans la galerie (Pictures/Verso)`);
+      return 'downloaded';
+    } catch (e) { toast(e.message, { err: true }); return 'error'; }
+  }
   if (navigator.canShare && navigator.canShare({ files })) {
     try { await navigator.share({ files, title: 'Verso' }); return 'shared'; }
     catch (e) { if (e.name === 'AbortError') return 'cancelled'; }
@@ -477,7 +486,7 @@ export async function mountStudio(view, id) {
     }
     if (card.draft) { card.draft = false; await persist(); }
     if (share) await shareOrDownload(files);
-    else { for (const f of files) download(f, f.name); toast('Image téléchargée'); }
+    else { for (const f of files) download(f, f.name); if (!android) toast('Image téléchargée'); }
   }
 
   async function splitCards() {
