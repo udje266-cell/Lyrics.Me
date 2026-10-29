@@ -504,19 +504,6 @@ async function renderEdit(id) {
 
 const SECTION_RE = /^\s*(\[.*\]|\(.*\)|((couplet|refrain|pont|intro|outro|pré-refrain|pre-refrain|chorus|verse|bridge|hook|interlude)\b[^a-z]{0,20}:?))\s*$/i;
 
-export function buildExcerpt(lines, indices, ellipsis) {
-  const sorted = [...indices].sort((a, b) => a - b);
-  const parts = [];
-  let group = [], prev = null;
-  const nonBlankBetween = (a, b) => lines.slice(a + 1, b).some(l => l.trim() && !SECTION_RE.test(l));
-  for (const i of sorted) {
-    if (prev !== null && nonBlankBetween(prev, i)) { parts.push(group); group = []; }
-    group.push(lines[i].trim()); prev = i;
-  }
-  if (group.length) parts.push(group);
-  return parts.map(g => g.join('\n')).join(ellipsis ? '\n…\n' : '\n\n');
-}
-
 async function renderSong(id) {
   const s = await db.get('songs', id);
   if (!s) { view.innerHTML = '<div class="empty">Ce morceau n\'existe plus.<br><br><a href="#/bibliotheque">Retour à la bibliothèque</a></div>'; return; }
@@ -524,35 +511,48 @@ async function renderSong(id) {
   const passages = (await db.all('passages')).filter(p => p.songId === id).sort((a, b) => a.createdAt - b.createdAt);
   const cards = (await db.all('cards')).filter(c => c.songId === id).sort((a, b) => b.updatedAt - a.updatedAt);
   const size = await db.setting('readSize', 1.1);
-  const sel = new Set();
-  let anchor = null, rangeMode = false, ellipsis = true;
+  let ellipsis = true;
+  const coverUrl = s.cover ? blobUrl('song-' + s.id + s.updatedAt, s.cover) : '';
+  const icon = d => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg>`;
+  const I = {
+    star: 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z',
+    book: 'M4 5a2 2 0 0 1 2-2h5v17H6a2 2 0 0 0-2 2zM20 5a2 2 0 0 0-2-2h-5v17h5a2 2 0 0 1 2 2z',
+    text: 'M4 7V5h11v2M9.5 5v14M7 19h5M14 12v-1.5h7V12M17.5 10.5V19M16 19h3',
+    edit: 'M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4',
+    link: 'M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5',
+    trash: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13',
+  };
+  const hint = !(await db.setting('selHintSeen', false));
 
   view.innerHTML = `
-    <div class="song-head">${coverHtml(s)}<div style="min-width:0">
-      <h1 style="margin-bottom:4px">${esc(s.title)}</h1>
-      <div class="muted"><a href="${artistHref(s.artist)}">${esc(s.artist)}</a>${s.featuring ? ' feat. ' + esc(s.featuring) : ''}${s.album ? ' · ' + (s.albumId ? `<a href="#/album/${s.albumId}">💿 ${esc(s.album)}</a>` : esc(s.album)) : ''}</div>
-      <div class="row small muted" style="margin-top:6px">${s.collection ? `<span class="tag">${esc(s.collection)}</span>` : ''}${(s.tags || []).map(t => `<span class="tag">#${esc(t)}</span>`).join('')}${s.lang ? `<span>${esc(s.lang)}</span>` : ''}</div>
-    </div></div>
-    <div class="row" style="margin-bottom:14px">
-      <button class="fav ${s.favorite ? 'on' : ''}" id="fav">${s.favorite ? '★ Favori' : '☆ Favori'}</button>
-      <button id="read">Mode lecture</button>
-      <a class="btn" href="#/morceau/${id}/modifier">Modifier</a>
-      ${s.sourceUrl ? `<a class="btn" href="${esc(s.sourceUrl)}" target="_blank" rel="noopener">Source ↗</a>` : ''}
-      <button class="danger ghost" id="del">Supprimer</button>
-    </div>
-    ${s.sourceName ? `<p class="small muted">Paroles : ${esc(s.sourceName)}${s.sourceUrl ? '' : ''}</p>` : ''}
+    <header class="song-hero${coverUrl ? ' has-cover' : ''}" ${coverUrl ? `style="--cover:url('${coverUrl}')"` : ''}>
+      <div class="song-hero-in">${coverHtml(s)}<div style="min-width:0">
+        <h1>${esc(s.title)}</h1>
+        <p class="song-by"><a href="${artistHref(s.artist)}">${esc(s.artist)}</a>${s.featuring ? ` <span class="muted">feat. ${esc(s.featuring)}</span>` : ''}</p>
+        ${s.album ? `<p class="song-album">${s.albumId ? `<a href="#/album/${s.albumId}">${esc(s.album)}</a>` : esc(s.album)}</p>` : ''}
+        ${s.collection || (s.tags || []).length ? `<div class="row small" style="margin-top:8px;gap:6px">${s.collection ? `<span class="tag">${esc(s.collection)}</span>` : ''}${(s.tags || []).map(t => `<span class="tag">#${esc(t)}</span>`).join('')}</div>` : ''}
+      </div></div>
+    </header>
+    <nav class="song-tools" aria-label="Actions du morceau">
+      <button id="fav" class="${s.favorite ? 'on' : ''}" aria-pressed="${!!s.favorite}">${icon(I.star)}<span>Favori</span></button>
+      <button id="read" aria-pressed="false">${icon(I.book)}<span>Lecture</span></button>
+      <button id="size" aria-expanded="false">${icon(I.text)}<span>Taille</span></button>
+      <a href="#/morceau/${id}/modifier">${icon(I.edit)}<span>Modifier</span></a>
+      ${s.sourceUrl ? `<a href="${esc(s.sourceUrl)}" target="_blank" rel="noopener">${icon(I.link)}<span>Source</span></a>` : ''}
+      <button id="del" class="danger">${icon(I.trash)}<span>Supprimer</span></button>
+    </nav>
+    <div class="size-pop" id="sizepop" hidden><button class="icon-btn" id="minus" aria-label="Réduire le texte">A−</button><input type="range" id="sizer" min="0.9" max="2" step="0.05" value="${size}" aria-label="Taille du texte"><button class="icon-btn" id="plus" aria-label="Agrandir le texte">A+</button></div>
     ${s.note ? `<div class="notice" style="margin-bottom:16px">${esc(s.note)}</div>` : ''}
-    <div class="row spread" style="margin-bottom:8px"><span class="small muted">Touchez une ligne pour la sélectionner · appui long pour une plage</span>
-      <span class="row"><button class="icon-btn" id="minus" aria-label="Réduire le texte">A−</button><button class="icon-btn" id="plus" aria-label="Agrandir le texte">A+</button></span></div>
     ${hasLyrics(s) ? '' : `<div class="notice field"><b>(paroles manquantes)</b><br>Ce titre n'a pas encore de paroles.
       <div class="row" style="margin-top:10px"><a class="btn primary" href="#/morceau/${id}/modifier">Ajouter les paroles</a><button id="findly">Chercher sur LRCLIB</button></div></div>`}
-    <div class="lyrics" id="lyrics" role="group" aria-label="Paroles : touchez ou appuyez sur Entrée pour sélectionner une ligne" style="--lsize:${size}rem">${lines.map((l, i) => !l.trim() ? '<div class="gap"></div>' : SECTION_RE.test(l) ? `<div class="sec">${esc(l.trim().replace(/^\[|\]$/g, ''))}</div>` : `<div class="ln" data-i="${i}" role="checkbox" aria-checked="false" tabindex="0">${esc(l)}</div>`).join('')}</div>
-    <section style="margin-top:28px"><h2>Passages favoris</h2><div id="passages">${passages.length ? '' : '<p class="muted small">Sélectionnez des lignes puis « Garder le passage ».</p>'}</div></section>
+    ${hasLyrics(s) && hint ? '<p class="sel-hint" id="selhint">Appuyez longuement sur un mot, puis étirez la sélection avec les poignées pour créer une carte.</p>' : ''}
+    <article class="lyrics" id="lyrics" aria-label="Paroles" style="--lsize:${size}rem">${lines.map((l, i) => !l.trim() ? '<div class="gap" aria-hidden="true"></div>' : SECTION_RE.test(l) ? `<div class="sec">${esc(l.trim().replace(/^\[|\]$/g, ''))}</div>` : `<div class="ln" data-i="${i}">${esc(l)}</div>`).join('')}</article>
+    ${s.sourceName ? `<p class="small muted lyrics-src">Paroles : ${esc(s.sourceName)}</p>` : ''}
+    <section style="margin-top:28px"><h2>Passages favoris</h2><div id="passages"></div></section>
     <section><h2>Cartes de ce morceau</h2>${cards.length ? `<div class="gallery">${cards.map(tileHtml).join('')}</div>` : '<p class="muted small">Aucune carte pour l\'instant.</p>'}</section>
     <div class="selbar" id="selbar" hidden>
-      <div class="row spread small" style="margin-bottom:6px"><b id="selcount" aria-live="polite"></b>
-        <span class="row"><button class="chip" id="range">Plage</button><button class="chip on" id="ell">« … » entre passages</button><button class="chip" id="clear">Effacer</button></span></div>
-      <div class="preview" id="selprev"></div>
+      <div class="preview" id="selprev" aria-live="polite"></div>
+      <div class="row small" style="margin-bottom:8px;gap:6px"><button class="chip" id="addpiece">＋ Ajouter un autre passage</button><button class="chip on" id="ell">« … » entre passages</button><button class="chip" id="clear">Effacer</button></div>
       <div class="row"><button class="primary" style="flex:1" id="mkcard">Créer une carte</button><button id="keep">Garder le passage</button></div>
     </div>`;
 
@@ -572,7 +572,7 @@ async function renderSong(id) {
   const drawPassages = () => {
     $('#passages').innerHTML = passages.map(p => `<div class="card-box" style="margin-bottom:8px"><div style="white-space:pre-line">${esc(p.text)}</div>
       ${p.note ? `<div class="small muted" style="margin-top:6px">${esc(p.note)}</div>` : ''}
-      <div class="row" style="margin-top:8px"><button data-pcard="${p.id}">Créer une carte</button><button class="ghost" data-pnote="${p.id}">Note</button><button class="ghost danger" data-pdel="${p.id}">Retirer</button></div></div>`).join('') || '<p class="muted small">Aucun passage gardé.</p>';
+      <div class="row" style="margin-top:8px"><button data-pcard="${p.id}">Créer une carte</button><button class="ghost" data-pnote="${p.id}">Note</button><button class="ghost danger" data-pdel="${p.id}">Retirer</button></div></div>`).join('') || '<p class="muted small">Aucun passage gardé. Sélectionnez des mots puis « Garder le passage ».</p>';
     $$('[data-pcard]').forEach(b => b.onclick = async () => { const p = passages.find(x => x.id === b.dataset.pcard); go('#/studio/' + (await newCard(s, p.text)).id); });
     $$('[data-pdel]').forEach(b => b.onclick = async () => { const i = passages.findIndex(x => x.id === b.dataset.pdel); const [p] = passages.splice(i, 1); await safe(() => db.del('passages', p.id)); drawPassages(); toast('Passage retiré', { action: { label: 'Annuler', run: async () => { passages.splice(i, 0, p); await db.put('passages', p); drawPassages(); } } }); });
     $$('[data-pnote]').forEach(b => b.onclick = () => editPassageNote(passages.find(x => x.id === b.dataset.pnote)));
@@ -583,65 +583,126 @@ async function renderSong(id) {
     });
   drawPassages();
 
-  const update = () => {
-    $$('.ln').forEach(el => { const on = sel.has(+el.dataset.i); el.classList.toggle('sel', on); el.setAttribute('aria-checked', on); });
-    $('#selbar').hidden = !sel.size;
-    $('#selcount').textContent = `${sel.size} ligne${sel.size > 1 ? 's' : ''}`;
-    $('#selprev').textContent = buildExcerpt(lines, sel, ellipsis);
-    $('#range').classList.toggle('on', rangeMode);
-    $('#ell').classList.toggle('on', ellipsis);
-  };
-  const selectRange = (a, b) => { for (let i = Math.min(a, b); i <= Math.max(a, b); i++) if (lines[i].trim() && !SECTION_RE.test(lines[i])) sel.add(i); };
-  let pressTimer = null, longPressed = false, startPt = null;
+  // --- Sélection mot par mot (sélection native du téléphone) ------------
+  // Un passage = { from: [ligne, position], to: [ligne, position] }, calé sur des mots entiers.
   const lyr = $('#lyrics');
-  lyr.addEventListener('pointerdown', e => {
-    const el = e.target.closest('.ln'); if (!el) return;
-    longPressed = false; startPt = [e.clientX, e.clientY];
-    pressTimer = setTimeout(() => {
-      longPressed = true;
-      const i = +el.dataset.i;
-      if (anchor !== null) selectRange(anchor, i); else sel.add(i);
-      anchor = i; navigator.vibrate && navigator.vibrate(15); update();
-    }, 480);
-  });
-  lyr.addEventListener('pointermove', e => { if (startPt && Math.hypot(e.clientX - startPt[0], e.clientY - startPt[1]) > 10) clearTimeout(pressTimer); });
-  ['pointerup', 'pointercancel'].forEach(ev => lyr.addEventListener(ev, () => clearTimeout(pressTimer)));
-  lyr.addEventListener('contextmenu', e => e.preventDefault());
-  lyr.addEventListener('click', e => {
-    const el = e.target.closest('.ln'); if (!el || longPressed) return;
-    const i = +el.dataset.i;
-    if (rangeMode && anchor !== null) { selectRange(anchor, i); rangeMode = false; }
-    else if (sel.has(i)) sel.delete(i); else sel.add(i);
-    anchor = i; update();
-  });
-  lyr.addEventListener('keydown', e => {
-    const el = e.target.closest('.ln'); if (!el) return;
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      const i = +el.dataset.i;
-      if (e.shiftKey && anchor !== null) selectRange(anchor, i); else if (sel.has(i)) sel.delete(i); else sel.add(i);
-      anchor = i; update();
-    } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-      e.preventDefault();
-      const all = $$('.ln'), k = all.indexOf(el) + (e.key === 'ArrowDown' ? 1 : -1);
-      if (all[k]) all[k].focus();
+  const lnEls = $$('.ln', lyr);
+  const lineEl = i => lnEls.find(el => +el.dataset.i === i);
+  let basket = [], current = null;
+  const isWord = c => /[\p{L}\p{N}'’-]/u.test(c || '');
+  function pieceFromSelection() {
+    const sel = getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount) return null;
+    const r = sel.getRangeAt(0);
+    if (!lyr.contains(r.commonAncestorContainer)) return null;
+    const hit = lnEls.filter(el => r.intersectsNode(el));
+    if (!hit.length) return null;
+    const first = hit[0], last = hit[hit.length - 1];
+    const fi = +first.dataset.i, li = +last.dataset.i;
+    let fo = first.contains(r.startContainer) && r.startContainer.nodeType === 3 ? r.startOffset : 0;
+    let lo = last.contains(r.endContainer) && r.endContainer.nodeType === 3 ? r.endOffset : lines[li].length;
+    const ft = lines[fi], lt = lines[li];
+    while (fo > 0 && isWord(ft[fo - 1])) fo--;          // ne coupe pas un mot au début
+    while (lo < lt.length && isWord(lt[lo])) lo++;       // ni à la fin
+    while (fo < ft.length && /\s/.test(ft[fo])) fo++;
+    while (lo > 0 && /\s/.test(lt[lo - 1])) lo--;
+    if (fi === li && lo <= fo) return null;
+    return { from: [fi, fo], to: [li, lo] };
+  }
+  const textOf = p => {
+    const out = [];
+    for (let i = p.from[0]; i <= p.to[0]; i++) {
+      if (!lineEl(i)) continue;
+      const t = lines[i];
+      out.push(t.slice(i === p.from[0] ? p.from[1] : 0, i === p.to[0] ? p.to[1] : t.length).trim());
     }
-  });
-  $('#range').onclick = () => { rangeMode = !rangeMode; update(); if (rangeMode) toast('Touchez la dernière ligne de la plage'); };
+    return out.filter(Boolean).join('\n');
+  };
+  const cmp = (a, b) => a.from[0] - b.from[0] || a.from[1] - b.from[1];
+  function excerpt() {
+    const sorted = [...basket, ...(current ? [current] : [])].sort(cmp);
+    // Passages qui se chevauchent : fusionnés pour ne rien répéter.
+    const all = [];
+    const after = (x, y) => x[0] > y[0] || (x[0] === y[0] && x[1] > y[1]);
+    for (const p of sorted) {
+      const last = all[all.length - 1];
+      if (last && !after(p.from, last.to)) { if (after(p.to, last.to)) last.to = p.to; }
+      else all.push({ from: [...p.from], to: [...p.to] });
+    }
+    let out = '';
+    all.forEach((p, k) => {
+      if (k) {
+        const prev = all[k - 1];
+        const between = lines.slice(prev.to[0] + 1, p.from[0]).some(l => l.trim() && !SECTION_RE.test(l));
+        const cut = prev.to[1] < lines[prev.to[0]].trimEnd().length || p.from[1] > 0 || between || p.from[0] === prev.to[0];
+        out += cut ? (ellipsis ? '\n…\n' : '\n\n') : '\n';
+      }
+      out += textOf(p);
+    });
+    return out;
+  }
+  // Passages déjà retenus, surlignés dans le texte (API Highlight, si disponible).
+  function paintPieces() {
+    if (!window.CSS || !CSS.highlights || typeof Highlight === 'undefined') return;
+    const ranges = basket.map(p => {
+      const r = document.createRange();
+      r.setStart(lineEl(p.from[0]).firstChild, p.from[1]);
+      r.setEnd(lineEl(p.to[0]).firstChild, p.to[1]);
+      return r;
+    });
+    CSS.highlights.set('verso-pick', new Highlight(...ranges));
+  }
+  const update = () => {
+    const ex = excerpt();
+    $('#selbar').hidden = !ex;
+    $('#selprev').textContent = ex;
+    $('#addpiece').hidden = !current;
+    $('#ell').hidden = basket.length + (current ? 1 : 0) < 2;
+    $('#ell').classList.toggle('on', ellipsis);
+    paintPieces();
+  };
+  let selTimer = 0;
+  function onSel() {
+    clearTimeout(selTimer);
+    selTimer = setTimeout(() => {
+      if (!document.body.contains(lyr)) { document.removeEventListener('selectionchange', onSel); return; }
+      current = pieceFromSelection();
+      if (current && $('#selhint')) { $('#selhint').remove(); db.setSetting('selHintSeen', true); }
+      update();
+    }, 120);
+  }
+  document.addEventListener('selectionchange', onSel);
+  // Quand le doigt (ou la souris) se lève, la sélection affichée est recalée sur des mots entiers.
+  let touching = false;
+  const snap = () => setTimeout(() => {
+    if (touching || !current || !document.body.contains(lyr)) return;
+    const sel = getSelection(); if (!sel.rangeCount) return;
+    const r = sel.getRangeAt(0), a = lineEl(current.from[0]).firstChild, z = lineEl(current.to[0]).firstChild;
+    if (r.startContainer === a && r.startOffset === current.from[1] && r.endContainer === z && r.endOffset === current.to[1]) return;
+    const nr = document.createRange(); nr.setStart(a, current.from[1]); nr.setEnd(z, current.to[1]);
+    sel.removeAllRanges(); sel.addRange(nr);
+  }, 250);
+  lyr.addEventListener('touchstart', () => { touching = true; }, { passive: true });
+  ['touchend', 'touchcancel'].forEach(ev => lyr.addEventListener(ev, () => { touching = false; snap(); }, { passive: true }));
+  lyr.addEventListener('mouseup', snap);
+  const clearHl = () => { if (window.CSS && CSS.highlights) CSS.highlights.delete('verso-pick'); };
+  $('#addpiece').onclick = () => { if (!current) return; basket.push(current); current = null; getSelection().removeAllRanges(); update(); toast('Passage ajouté : sélectionnez-en un autre'); };
   $('#ell').onclick = () => { ellipsis = !ellipsis; update(); };
-  $('#clear').onclick = () => { sel.clear(); anchor = null; rangeMode = false; update(); };
-  $('#mkcard').onclick = async () => go('#/studio/' + (await newCard(s, buildExcerpt(lines, sel, ellipsis))).id);
+  $('#clear').onclick = () => { basket = []; current = null; getSelection().removeAllRanges(); clearHl(); update(); };
+  $('#mkcard').onclick = async () => { const t = excerpt(); if (!t) return; clearHl(); go('#/studio/' + (await newCard(s, t)).id); };
   $('#keep').onclick = async () => {
-    const p = { id: uid(), songId: id, title: s.title, artist: s.artist, text: buildExcerpt(lines, sel, ellipsis), lines: [...sel].sort((a, b) => a - b), note: '', createdAt: Date.now(), updatedAt: Date.now() };
-    await safe(() => db.put('passages', p)); passages.push(p); drawPassages(); sel.clear(); update();
+    const p = { id: uid(), songId: id, title: s.title, artist: s.artist, text: excerpt(), note: '', createdAt: Date.now(), updatedAt: Date.now() };
+    await safe(() => db.put('passages', p)); passages.push(p); drawPassages(); $('#clear').click();
     toast('Passage gardé', { action: { label: 'Ajouter une note', run: () => editPassageNote(p) } });
   };
-  const setSize = v => { v = Math.min(2.2, Math.max(0.85, Math.round(v * 100) / 100)); lyr.style.setProperty('--lsize', v + 'rem'); db.setSetting('readSize', v); return v; };
+  const setSize = v => { v = Math.min(2, Math.max(0.9, Math.round(v * 100) / 100)); lyr.style.setProperty('--lsize', v + 'rem'); $('#sizer').value = v; db.setSetting('readSize', v); return v; };
   let cur = size;
   $('#plus').onclick = () => { cur = setSize(cur + 0.1); };
   $('#minus').onclick = () => { cur = setSize(cur - 0.1); };
-  $('#read').onclick = () => { const on = document.body.classList.toggle('reading'); $('#read').textContent = on ? 'Quitter la lecture' : 'Mode lecture'; };
-  $('#fav').onclick = async () => { s.favorite = !s.favorite; s.updatedAt = Date.now(); await safe(() => db.put('songs', s)); $('#fav').classList.toggle('on', s.favorite); $('#fav').textContent = s.favorite ? '★ Favori' : '☆ Favori'; };
+  $('#sizer').oninput = e => { cur = setSize(+e.target.value); };
+  $('#size').onclick = () => { const p = $('#sizepop'); p.hidden = !p.hidden; $('#size').setAttribute('aria-expanded', !p.hidden); };
+  $('#read').onclick = () => { const on = document.body.classList.toggle('reading'); $('#read').setAttribute('aria-pressed', on); $('#read').classList.toggle('on', on); };
+  $('#fav').onclick = async () => { s.favorite = !s.favorite; s.updatedAt = Date.now(); await safe(() => db.put('songs', s)); $('#fav').classList.toggle('on', s.favorite); $('#fav').setAttribute('aria-pressed', s.favorite); };
   $('#del').onclick = async () => {
     s.deletedAt = Date.now(); s.updatedAt = Date.now();
     await safe(() => db.put('songs', s));
