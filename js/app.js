@@ -1,8 +1,9 @@
 import { db, uid, exportBackup, importBackup } from './db.js';
-import { searchLyrics, importFromUrl, findArtwork, fetchImage } from './sources.js';
+import { searchLyrics, importFromUrl, findArtwork, fetchImage, findLyrics } from './sources.js';
 import { compressImage, lightLogoURL } from './render.js';
 import { mountStudio, newCard } from './studio.js';
 import { renderAlbumForm, renderAlbum, attachAlbum, liveAlbums, albumRow } from './albums.js';
+import { renderDiscography } from './discography.js';
 
 // --- Utilitaires ----------------------------------------------------------
 
@@ -124,6 +125,7 @@ const routes = [
   [/^\/?$/, renderHome, 'home'],
   [/^\/bibliotheque$/, renderLibrary, 'library'],
   [/^\/ajouter\/album$/, () => renderAlbumForm(), 'add'],
+  [/^\/ajouter\/discographie$/, renderDiscography, 'add'],
   [/^\/ajouter(?:\/(manuel|recherche|lien))?$/, renderAdd, 'add'],
   [/^\/album\/([\w]+)$/, renderAlbum, 'library'],
   [/^\/album\/([\w]+)\/modifier$/, renderAlbumForm, 'library'],
@@ -185,7 +187,7 @@ function heroHtml(all) {
   }
   const pick = pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
   const actions = `<div class="hero-actions"><a class="btn primary" href="#/ajouter/manuel">Ajouter des paroles</a>
-      <span class="hero-links"><a href="#/ajouter/album">un album</a><a href="#/ajouter/recherche">rechercher</a><a href="#/ajouter/lien">depuis un lien</a></span></div>`;
+      <span class="hero-links"><a href="#/ajouter/discographie">un artiste</a><a href="#/ajouter/album">un album</a><a href="#/ajouter/recherche">rechercher</a><a href="#/ajouter/lien">depuis un lien</a></span></div>`;
   if (!pick) return `<div class="hero"><img class="hero-logo brand-logo" src="icons/logo.png" alt="Verso" width="2172" height="724" fetchpriority="high">
       <p class="hero-lede">Gardez les paroles que vous aimez et transformez vos passages préférés en cartes.</p>${actions}</div>`;
   const words = pick.t.split(' '), mid = Math.ceil(words.length / 2);
@@ -217,9 +219,11 @@ function tileHtml(c) {
     <div>${c.draft ? '<span class="badge">Brouillon · </span>' : ''}<b>${esc(c.title || 'Sans titre')}</b><br><span class="muted">${esc(c.artist || '')}</span></div></a>`;
 }
 
+const hasLyrics = s => !!(s.lyrics && s.lyrics.trim());
+
 function songRow(s, extra = '') {
   return `<li class="song"><a class="main" href="#/morceau/${s.id}">${coverHtml(s)}<div style="min-width:0">
-    <div class="t">${esc(s.title)}</div><div class="a">${esc(s.artist)}${s.featuring ? ' feat. ' + esc(s.featuring) : ''}${s.album ? ' · ' + esc(s.album) : ''}</div>${extra}</div></a>
+    <div class="t">${esc(s.title)}</div><div class="a">${esc(s.artist)}${s.featuring ? ' feat. ' + esc(s.featuring) : ''}${s.album ? ' · ' + esc(s.album) : ''}</div>${hasLyrics(s) ? '' : '<div class="missing">(paroles manquantes)</div>'}${extra}</div></a>
     <button class="icon-btn ghost fav ${s.favorite ? 'on' : ''}" data-fav="${s.id}" aria-label="Favori : ${esc(s.title)}" aria-pressed="${!!s.favorite}">${s.favorite ? '★' : '☆'}</button></li>`;
 }
 
@@ -234,7 +238,7 @@ function bindFavs() {
 
 // --- Bibliothèque ---------------------------------------------------------
 
-const lib = { q: '', sort: 'date', lang: '', collection: '', tag: '', fav: false, trash: false, albums: false };
+const lib = { q: '', sort: 'date', lang: '', collection: '', tag: '', fav: false, trash: false, albums: false, missing: false };
 
 async function renderLibrary() {
   const all = await songs();
@@ -249,6 +253,7 @@ async function renderLibrary() {
     <div class="chips" style="margin-bottom:8px">
       <button class="chip ${lib.albums ? 'on' : ''}" id="f-albums">💿 Albums</button>
       <button class="chip ${lib.fav ? 'on' : ''}" id="f-fav">★ Favoris</button>
+      ${live.some(x => !hasLyrics(x)) ? `<button class="chip ${lib.missing ? 'on' : ''}" id="f-missing">Paroles manquantes (${live.filter(x => !hasLyrics(x)).length})</button>` : ''}
       ${cols.map(c => `<button class="chip ${lib.collection === c ? 'on' : ''}" data-col="${esc(c)}">${esc(c)}</button>`).join('')}
     </div>
     <div class="row" style="margin-bottom:12px">
@@ -273,6 +278,7 @@ async function renderLibrary() {
     let list = lib.trash ? all.filter(s => s.deletedAt) : live;
     if (!lib.trash) {
       if (lib.fav) list = list.filter(s => s.favorite);
+      if (lib.missing) list = list.filter(s => !hasLyrics(s));
       if (lib.collection) list = list.filter(s => s.collection === lib.collection);
       if (lib.lang) list = list.filter(s => s.lang === lib.lang);
       if (lib.tag) list = list.filter(s => (s.tags || []).includes(lib.tag));
@@ -316,6 +322,7 @@ async function renderLibrary() {
   if ($('#tag')) $('#tag').onchange = e => { lib.tag = e.target.value; draw(); };
   $('#f-fav').onclick = () => { lib.fav = !lib.fav; lib.albums = false; renderLibrary(); };
   $('#f-albums').onclick = () => { lib.albums = !lib.albums; renderLibrary(); };
+  if ($('#f-missing')) $('#f-missing').onclick = () => { lib.missing = !lib.missing; lib.albums = false; renderLibrary(); };
   $('#f-trash').onclick = () => { lib.trash = !lib.trash; renderLibrary(); };
   $$('[data-col]').forEach(b => b.onclick = () => { lib.collection = lib.collection === b.dataset.col ? '' : b.dataset.col; renderLibrary(); });
 }
@@ -339,7 +346,7 @@ async function songForm(song, { submitLabel, intro = '' } = {}) {
     <div>
       <div class="row spread"><label for="f-lyrics">Paroles *</label>
         <label class="btn ghost small" style="margin:0;color:var(--accent)">Importer un .txt<input type="file" id="f-txt" accept=".txt,text/plain" hidden></label></div>
-      <textarea id="f-lyrics" required placeholder="[Couplet 1]&#10;Collez les paroles ici…&#10;&#10;[Refrain]&#10;…">${esc(song.lyrics)}</textarea>
+      <textarea id="f-lyrics" ${song.missingLyrics ? '' : 'required'} placeholder="[Couplet 1]&#10;Collez les paroles ici…&#10;&#10;[Refrain]&#10;…">${esc(song.lyrics)}</textarea>
       <div class="small muted">Les paragraphes, retours à la ligne et indications comme [Refrain] sont conservés tels quels.</div>
     </div>
     <div class="grid2">
@@ -408,7 +415,8 @@ function bindSongForm(song, onSaved) {
       sourceUrl: $('#f-src').value.trim(), note: $('#f-note').value.trim(), cover,
       createdAt: song.createdAt || now, updatedAt: now,
     };
-    if (!s.lyrics.trim()) { toast('Les paroles sont vides.', { err: true }); return; }
+    if (!s.lyrics.trim() && !song.missingLyrics) { toast('Les paroles sont vides.', { err: true }); return; }
+    s.missingLyrics = !s.lyrics.trim();
     await attachAlbum(s);
     const dup = (await liveSongs()).find(o => o.id !== s.id && norm(o.title) === norm(s.title) && norm(o.artist) === norm(s.artist));
     if (dup && !await confirmDialog(`« ${dup.title} » de ${dup.artist} est déjà dans votre bibliothèque. L'ajouter quand même ?`, 'Ajouter quand même')) return;
@@ -419,7 +427,7 @@ function bindSongForm(song, onSaved) {
 }
 
 async function renderAdd(mode = 'manuel') {
-  const tabs = `<div class="seg" style="margin-bottom:18px">${[['manuel', 'Morceau'], ['album', 'Album'], ['recherche', 'Recherche'], ['lien', 'Lien']].map(([k, l]) => `<button data-mode="${k}" class="${mode === k ? 'on' : ''}">${l}</button>`).join('')}</div>`;
+  const tabs = `<div class="seg" style="margin-bottom:18px">${[['manuel', 'Morceau'], ['album', 'Album'], ['discographie', 'Artiste'], ['recherche', 'Recherche'], ['lien', 'Lien']].map(([k, l]) => `<button data-mode="${k}" class="${mode === k ? 'on' : ''}">${l}</button>`).join('')}</div>`;
   view.innerHTML = `<h1>Ajouter un morceau</h1>${tabs}<div id="addbody"></div>`;
   $$('[data-mode]').forEach(b => b.onclick = () => go('#/ajouter/' + b.dataset.mode));
   const body = $('#addbody');
@@ -522,6 +530,8 @@ async function renderSong(id) {
     ${s.note ? `<div class="notice" style="margin-bottom:16px">${esc(s.note)}</div>` : ''}
     <div class="row spread" style="margin-bottom:8px"><span class="small muted">Touchez une ligne pour la sélectionner · appui long pour une plage</span>
       <span class="row"><button class="icon-btn" id="minus" aria-label="Réduire le texte">A−</button><button class="icon-btn" id="plus" aria-label="Agrandir le texte">A+</button></span></div>
+    ${hasLyrics(s) ? '' : `<div class="notice field"><b>(paroles manquantes)</b><br>Ce titre n'a pas encore de paroles.
+      <div class="row" style="margin-top:10px"><a class="btn primary" href="#/morceau/${id}/modifier">Ajouter les paroles</a><button id="findly">Chercher sur LRCLIB</button></div></div>`}
     <div class="lyrics" id="lyrics" role="group" aria-label="Paroles : touchez ou appuyez sur Entrée pour sélectionner une ligne" style="--lsize:${size}rem">${lines.map((l, i) => !l.trim() ? '<div class="gap"></div>' : SECTION_RE.test(l) ? `<div class="sec">${esc(l.trim().replace(/^\[|\]$/g, ''))}</div>` : `<div class="ln" data-i="${i}" role="checkbox" aria-checked="false" tabindex="0">${esc(l)}</div>`).join('')}</div>
     <section style="margin-top:28px"><h2>Passages favoris</h2><div id="passages">${passages.length ? '' : '<p class="muted small">Sélectionnez des lignes puis « Garder le passage ».</p>'}</div></section>
     <section><h2>Cartes de ce morceau</h2>${cards.length ? `<div class="gallery">${cards.map(tileHtml).join('')}</div>` : '<p class="muted small">Aucune carte pour l\'instant.</p>'}</section>
@@ -532,6 +542,19 @@ async function renderSong(id) {
       <div class="row"><button class="primary" style="flex:1" id="mkcard">Créer une carte</button><button id="keep">Garder le passage</button></div>
     </div>`;
 
+  if ($('#findly')) $('#findly').onclick = async () => {
+    const b = $('#findly'); b.disabled = true; b.textContent = 'Recherche…';
+    try {
+      const r = await findLyrics(s.title, s.artist, s.album, 0);
+      if (!r) { toast('Toujours introuvable sur LRCLIB : ajoutez-les vous-même.'); b.disabled = false; b.textContent = 'Chercher sur LRCLIB'; return; }
+      const v = await openDialog(`<form method="dialog"><h3>Paroles trouvées</h3><p class="small muted">${esc(r.title)} — ${esc(r.artist)} (LRCLIB). Vérifiez qu'il s'agit du bon titre.</p>
+        <div class="card-box" style="white-space:pre-line;max-height:40dvh;overflow:auto">${esc(r.lyrics)}</div>
+        <div class="row" style="justify-content:flex-end;margin-top:12px"><button value="no">Annuler</button><button value="ok" class="primary">Ajouter ces paroles</button></div></form>`);
+      if (v !== 'ok') { b.disabled = false; b.textContent = 'Chercher sur LRCLIB'; return; }
+      Object.assign(s, { lyrics: r.lyrics, missingLyrics: false, sourceName: 'LRCLIB', sourceUrl: s.sourceUrl || r.sourceUrl, updatedAt: Date.now() });
+      await safe(() => db.put('songs', s)); toast('Paroles ajoutées'); renderSong(id);
+    } catch (e) { toast(e.message, { err: true }); b.disabled = false; b.textContent = 'Chercher sur LRCLIB'; }
+  };
   const drawPassages = () => {
     $('#passages').innerHTML = passages.map(p => `<div class="card-box" style="margin-bottom:8px"><div style="white-space:pre-line">${esc(p.text)}</div>
       ${p.note ? `<div class="small muted" style="margin-top:6px">${esc(p.note)}</div>` : ''}

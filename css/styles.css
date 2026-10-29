@@ -216,3 +216,7 @@ img.cover { height: 52px; }
 .skip:focus { top: 8px; }
 .lyrics .ln:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
 .hero-logo, .nav-brand img { height: auto; }
+
+.missing { color: var(--danger); font-size: .8rem; margin-top: 2px; }
+.seg { overflow-x: auto; scrollbar-width: none; }
+.seg button { white-space: nowrap; }

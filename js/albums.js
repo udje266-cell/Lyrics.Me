@@ -54,7 +54,7 @@ export async function renderAlbumForm(id) {
   const tracks = id ? sortTracks((await db.all('songs')).filter(s => s.albumId === id && !s.deletedAt)) : [];
   let cover = album.cover || null;
   view.innerHTML = `<h1>${id ? 'Modifier l\'album' : 'Ajouter un album'}</h1>
-    ${id ? '' : `<div class="seg" style="margin-bottom:18px">${[['manuel', 'Morceau'], ['album', 'Album'], ['recherche', 'Recherche'], ['lien', 'Lien']].map(([k, l]) => `<button type="button" data-mode="${k}" class="${k === 'album' ? 'on' : ''}">${l}</button>`).join('')}</div>`}
+    ${id ? '' : `<div class="seg" style="margin-bottom:18px">${[['manuel', 'Morceau'], ['album', 'Album'], ['discographie', 'Artiste'], ['recherche', 'Recherche'], ['lien', 'Lien']].map(([k, l]) => `<button type="button" data-mode="${k}" class="${k === 'album' ? 'on' : ''}">${l}</button>`).join('')}</div>`}
     <form id="albumform" class="stack" autocomplete="off">
       <div class="grid2">
         <div><label for="a-title">Titre de l'album *</label><input id="a-title" required value="${esc(album.title)}"></div>
@@ -189,7 +189,7 @@ export async function renderAlbum(id) {
     ${a.note ? `<div class="notice" style="margin-bottom:16px">${esc(a.note)}</div>` : ''}
     <ul class="songs">${tracks.map((t, i) => `<li class="song"><span class="muted" style="width:28px;text-align:right">${t.trackNo || i + 1}</span>
       <a class="main" href="#/morceau/${t.id}"><div style="min-width:0"><div class="t">${esc(t.title)}</div>
-      <div class="a">${t.featuring ? 'feat. ' + esc(t.featuring) + ' · ' : ''}${t.lyrics && t.lyrics.trim() ? '' : '<span style="color:var(--danger)">paroles à ajouter</span>'}</div></div></a></li>`).join('') || '<div class="empty">Aucun morceau dans cet album.</div>'}</ul>`;
+      <div class="a">${t.featuring ? 'feat. ' + esc(t.featuring) + ' · ' : ''}${t.lyrics && t.lyrics.trim() ? '' : '<span class="missing">(paroles manquantes)</span>'}</div></div></a></li>`).join('') || '<div class="empty">Aucun morceau dans cet album.</div>'}</ul>`;
   $('#addsong').onclick = () => {
     try { sessionStorage.setItem('verso-prefill', JSON.stringify({ album: a.title, artist: a.artist, albumId: a.id, trackNo: tracks.length + 1, lang: a.lang, collection: a.collection, tags: a.tags })); } catch {}
     go('#/ajouter/manuel');

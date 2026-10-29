@@ -140,3 +140,52 @@ export async function fetchImage(url) {
   if (!res.ok) throw new Error(`Téléchargement de l'image impossible (${res.status}).`);
   return res.blob();
 }
+
+// --- Discographie (Deezer) et paroles en lot (LRCLIB) ----------------------
+
+export async function searchArtists(q) {
+  const r = await jsonp('/search/artist', { q, limit: 8 });
+  return (r.data || []).map(a => ({ id: a.id, name: a.name, picture: a.picture_medium, fans: a.nb_fan, albums: a.nb_album }));
+}
+
+// Tous les albums, EP et singles de l'artiste (pagination Deezer).
+export async function artistAlbums(id) {
+  const out = [];
+  let index = 0;
+  for (let page = 0; page < 10; page++) {
+    const r = await jsonp(`/artist/${id}/albums`, { limit: 100, index });
+    out.push(...(r.data || []));
+    if (!r.next) break;
+    index += 100;
+  }
+  return out.map(a => ({ id: a.id, title: a.title, cover: a.cover_xl, thumb: a.cover_medium, year: (a.release_date || '').slice(0, 4), type: a.record_type, explicit: a.explicit_lyrics }));
+}
+
+export async function albumTracks(id) {
+  const a = await jsonp(`/album/${id}`);
+  const tracks = (a.tracks && a.tracks.data) || [];
+  return {
+    title: a.title, artist: a.artist ? a.artist.name : '', year: (a.release_date || '').slice(0, 4), cover: a.cover_xl,
+    tracks: tracks.map((t, i) => ({ title: t.title, artist: t.artist ? t.artist.name : '', duration: t.duration, trackNo: t.track_position || i + 1, link: t.link })),
+  };
+}
+
+// Sépare « Titre (feat. X) » en titre et invités.
+export function splitFeat(title) {
+  const m = String(title).match(/^(.*?)\s*[([]\s*(?:feat\.?|ft\.?|featuring|avec)\s+([^)\]]+)[)\]]\s*(.*)$/i);
+  return m ? { title: (m[1] + (m[3] ? ' ' + m[3] : '')).trim(), featuring: m[2].trim() } : { title: String(title).trim(), featuring: '' };
+}
+
+// Paroles d'un titre précis : correspondance exacte, puis recherche (durée à ±3 s).
+export async function findLyrics(title, artist, album, duration) {
+  const get = new URLSearchParams({ track_name: title, artist_name: artist, album_name: album || '', duration: Math.round(duration || 0) });
+  try {
+    const res = await fetch(`${LRCLIB}/get?${get}`);
+    if (res.ok) { const r = await res.json(); if (r.plainLyrics && !r.instrumental) return toResult(r); }
+    if (res.status === 429) await new Promise(r => setTimeout(r, 2000));
+  } catch { /* on tente la recherche */ }
+  const list = await fetchJson(`${LRCLIB}/search?${new URLSearchParams({ track_name: title, artist_name: artist })}`).catch(() => []);
+  const ok = list.filter(r => r.plainLyrics && !r.instrumental);
+  const best = ok.find(r => !duration || Math.abs((r.duration || 0) - duration) <= 3) || ok[0];
+  return best ? toResult(best) : null;
+}
