@@ -5,14 +5,14 @@
     .scr { position: absolute; inset: 0; overflow: hidden; background: #131a11; }
     .scr > img { position: absolute; left: 0; top: 0; width: 1080px; height: auto; }
     .stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1000px; overflow: hidden; }
-    .stage > img { position: absolute; left: 0; top: -200px; width: 1080px; height: auto; }
+    .stage > img { position: absolute; left: 0; top: -210px; width: 1080px; height: auto; }
     .tap { position: absolute; width: 0; height: 0; }
     .tap i { position: absolute; left: -60px; top: -60px; width: 120px; height: 120px; border-radius: 50%; }
     .tap .dot { background: rgba(255, 255, 255, 0.55); box-shadow: 0 0 0 3px rgba(0,0,0,.18); }
     .tap .ring { background: rgba(255, 255, 255, 0.35); }
   </style>
   <div id="root" data-composition-id="profile" data-width="1080" data-height="1920">
-    <div id="pr-base" class="clip scrw" data-start="0.00" data-duration="0.55" style="z-index:1" data-layout-allow-overflow><div id="pr-base-in" class="scr"><img id="pr-base-img" src="assets/screens/08b-partager.png" alt=""></div></div><div id="pr-prof" class="clip scrw" data-start="0.30" data-duration="5.70" style="z-index:2" data-layout-allow-overflow><div id="pr-prof-in" class="scr"><img id="pr-prof-img" src="assets/screens/09-profil.png" alt=""></div></div><div id="pr-t1" class="clip tap" data-start="0.05" data-duration="0.72" style="left:972px;top:1778px;z-index:30"><i id="pr-t1-r" class="ring"></i><i id="pr-t1-d" class="dot"></i></div><div id="pr-snack" class="clip" data-start="4.71" data-duration="1.29" style="position:absolute;left:60px;right:60px;top:1440px;z-index:20"><div id="pr-snack-in" style="background:#eef3e4;color:#161f14;border-radius:18px;padding:30px 36px;font-family:Inter,sans-serif;font-size:36px;font-weight:600;box-shadow:0 12px 40px rgba(0,0,0,.4)">✈ Mode avion activé · Verso fonctionne toujours</div></div>
+    <div id="pr-base" class="clip scrw" data-start="0.00" data-duration="0.55" style="z-index:1" data-layout-allow-overflow><div id="pr-base-in" class="scr"><img id="pr-base-img" src="assets/screens/08b-partager.png" alt=""></div></div><div id="pr-prof" class="clip scrw" data-start="0.30" data-duration="5.70" style="z-index:2" data-layout-allow-overflow><div id="pr-prof-in" class="scr"><img id="pr-prof-img" src="assets/screens/09-profil.png" alt=""></div></div><div id="pr-t1" class="clip tap" data-start="0.05" data-duration="0.72" style="left:972px;top:1778px;z-index:30"><i id="pr-t1-r" class="ring"></i><i id="pr-t1-d" class="dot"></i></div><div id="pr-snack" class="clip" data-start="3.58" data-duration="2.42" style="position:absolute;left:60px;right:60px;top:1440px;z-index:20"><div id="pr-snack-in" style="background:#eef3e4;color:#161f14;border-radius:18px;padding:30px 36px;font-family:Inter,sans-serif;font-size:36px;font-weight:600;box-shadow:0 12px 40px rgba(0,0,0,.4)">✈ Mode avion activé · Verso fonctionne toujours</div></div>
   </div>
   <script>
     const tl = gsap.timeline({ paused: true });
@@ -20,7 +20,7 @@
     tl.fromTo("#pr-t1-r", {scale: 0.3, opacity: 0.9}, {scale: 2.6, opacity: 0, duration: 0.5, ease: "power2.out"}, 0.10);
     tl.to("#pr-t1-d", {scale: 0.6, opacity: 0, duration: 0.14, ease: "power2.in"}, 0.22);
     tl.fromTo("#pr-prof-in", {opacity: 0, scale: 0.92}, {opacity: 1, scale: 1, duration: 0.3, ease: "power2.out"}, 0.30);
-    tl.fromTo("#pr-snack-in", {y: 160, opacity: 0}, {y: 0, opacity: 1, duration: 0.35, ease: "power3.out"}, 4.71);
+    tl.fromTo("#pr-snack-in", {y: 160, opacity: 0}, {y: 0, opacity: 1, duration: 0.35, ease: "power3.out"}, 3.58);
     window.__timelines["profile"] = tl;
   </script>
 </template>

@@ -1,0 +1,22 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; overflow: hidden; background: #131a11; }
+    .scrw { position: absolute; left: 0; top: 84px; width: 1080px; height: 1788px; }
+    .scr { position: absolute; inset: 0; overflow: hidden; background: #131a11; }
+    .scr > img { position: absolute; left: 0; top: 0; width: 1080px; height: auto; }
+    .stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1000px; overflow: hidden; }
+    .stage > img { position: absolute; left: 0; top: -210px; width: 1080px; height: auto; }
+    .tap { position: absolute; width: 0; height: 0; }
+    .tap i { position: absolute; left: -60px; top: -60px; width: 120px; height: 120px; border-radius: 50%; }
+    .tap .dot { background: rgba(255, 255, 255, 0.55); box-shadow: 0 0 0 3px rgba(0,0,0,.18); }
+    .tap .ring { background: rgba(255, 255, 255, 0.35); }
+  </style>
+  <div id="root" data-composition-id="hook" data-width="1080" data-height="1920">
+    <img id="hook-card" class="clip" src="assets/screens/carte-bandeau-story.png" alt="" data-start="0" data-duration="4.63" style="position:absolute;left:0;top:0;width:1080px;height:1920px">
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#hook-card", {scale: 1.1}, {scale: 1, duration: 4.63, ease: "power1.out"}, 0);
+    window.__timelines["hook"] = tl;
+  </script>
+</template>

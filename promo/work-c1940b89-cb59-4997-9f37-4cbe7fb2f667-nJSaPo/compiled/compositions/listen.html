@@ -1,0 +1,29 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; overflow: hidden; background: #131a11; }
+    .scrw { position: absolute; left: 0; top: 84px; width: 1080px; height: 1788px; }
+    .scr { position: absolute; inset: 0; overflow: hidden; background: #131a11; }
+    .scr > img { position: absolute; left: 0; top: 0; width: 1080px; height: auto; }
+    .stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1000px; overflow: hidden; }
+    .stage > img { position: absolute; left: 0; top: -210px; width: 1080px; height: auto; }
+    .tap { position: absolute; width: 0; height: 0; }
+    .tap i { position: absolute; left: -60px; top: -60px; width: 120px; height: 120px; border-radius: 50%; }
+    .tap .dot { background: rgba(255, 255, 255, 0.55); box-shadow: 0 0 0 3px rgba(0,0,0,.18); }
+    .tap .ring { background: rgba(255, 255, 255, 0.35); }
+  </style>
+  <div id="root" data-composition-id="listen" data-width="1080" data-height="1920">
+    <div id="ls-home" class="clip scrw" data-start="0.00" data-duration="3.75" style="z-index:1" data-layout-allow-overflow><div id="ls-home-in" class="scr"><img id="ls-home-img" src="assets/screens/01-accueil.png" alt=""></div></div><div id="ls-lyr" class="clip scrw" data-start="3.40" data-duration="1.69" style="z-index:2" data-layout-allow-overflow><div id="ls-lyr-in" class="scr"><img id="ls-lyr-img" src="assets/screens/02-paroles.png" alt=""></div></div><div id="ls-t1" class="clip tap" data-start="3.10" data-duration="0.72" style="left:697px;top:285px;z-index:30"><i id="ls-t1-r" class="ring"></i><i id="ls-t1-d" class="dot"></i></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#ls-home-in", {opacity: 0, scale: 0.92}, {opacity: 1, scale: 1, duration: 0.3, ease: "power2.out"}, 0.00);
+    tl.fromTo("#ls-home-img", {scale: 1, x: 0, y: 0}, {scale: 1.16, x: -50, y: -10, duration: 0.6, ease: "power2.inOut"}, 1.50);
+    tl.to("#ls-home-img", {scale: 1, x: 0, y: 0, duration: 0.4, ease: "power2.inOut"}, 2.70);
+    tl.fromTo("#ls-t1-d", {scale: 0.4, opacity: 0}, {scale: 1, opacity: 1, duration: 0.08, ease: "power2.out"}, 3.15);
+    tl.fromTo("#ls-t1-r", {scale: 0.3, opacity: 0.9}, {scale: 2.6, opacity: 0, duration: 0.5, ease: "power2.out"}, 3.15);
+    tl.to("#ls-t1-d", {scale: 0.6, opacity: 0, duration: 0.14, ease: "power2.in"}, 3.27);
+    tl.fromTo("#ls-lyr-in", {clipPath: "inset(135px 249px 1521px 563px round 60px)"}, {clipPath: "inset(0px 0px 0px 0px round 0px)", duration: 0.5, ease: "power3.inOut"}, 3.40);
+    tl.fromTo("#ls-lyr-img", {y: 0}, {y: -380, duration: 1.40, ease: "power2.inOut"}, 4.25);
+    window.__timelines["listen"] = tl;
+  </script>
+</template>

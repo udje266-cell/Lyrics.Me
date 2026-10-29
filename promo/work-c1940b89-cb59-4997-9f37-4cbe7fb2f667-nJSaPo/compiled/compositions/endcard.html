@@ -1,0 +1,26 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; overflow: hidden; background: #131a11; }
+    .scrw { position: absolute; left: 0; top: 84px; width: 1080px; height: 1788px; }
+    .scr { position: absolute; inset: 0; overflow: hidden; background: #131a11; }
+    .scr > img { position: absolute; left: 0; top: 0; width: 1080px; height: auto; }
+    .stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1000px; overflow: hidden; }
+    .stage > img { position: absolute; left: 0; top: -210px; width: 1080px; height: auto; }
+    .tap { position: absolute; width: 0; height: 0; }
+    .tap i { position: absolute; left: -60px; top: -60px; width: 120px; height: 120px; border-radius: 50%; }
+    .tap .dot { background: rgba(255, 255, 255, 0.55); box-shadow: 0 0 0 3px rgba(0,0,0,.18); }
+    .tap .ring { background: rgba(255, 255, 255, 0.35); }
+  </style>
+  <div id="root" data-composition-id="endcard" data-width="1080" data-height="1920">
+    <div id="ec-bg" class="clip" data-start="0" data-duration="2.87" style="position:absolute;inset:0;background:#f5f7ef"></div>
+    <div id="ec-mark" class="clip" data-start="0" data-duration="2.87" style="position:absolute;left:190px;top:600px;width:700px;height:234px;overflow:hidden" data-layout-allow-overflow><img id="ec-logo" src="assets/logo.png" alt="Verso" style="width:700px;height:auto"></div>
+    <div id="ec-tag" class="clip" data-start="0.6" data-duration="2.27" style="position:absolute;left:90px;right:90px;top:900px;text-align:center;color:#161f14;font-family:Inter,sans-serif;font-size:58px;font-weight:900;letter-spacing:-0.02em;line-height:1.15"><span>Tes paroles préférées,<br>en cartes.</span></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#ec-logo", {clipPath: "inset(0 72% 0 0)", scale: 0.5, y: 40}, {clipPath: "inset(0 72% 0 0)", scale: 1, y: 0, duration: 0.4, ease: "back.out(1.6)"}, 0);
+    tl.to("#ec-logo", {clipPath: "inset(0 0% 0 0)", duration: 0.45, ease: "power3.inOut"}, 0.42);
+    tl.fromTo("#ec-tag span", {y: 30, opacity: 0}, {y: 0, opacity: 1, duration: 0.4, ease: "power3.out"}, 0.7);
+    window.__timelines["endcard"] = tl;
+  </script>
+</template>

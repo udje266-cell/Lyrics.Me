@@ -1,0 +1,34 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; overflow: hidden; background: #131a11; }
+    .scrw { position: absolute; left: 0; top: 84px; width: 1080px; height: 1788px; }
+    .scr { position: absolute; inset: 0; overflow: hidden; background: #131a11; }
+    .scr > img { position: absolute; left: 0; top: 0; width: 1080px; height: auto; }
+    .stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1000px; overflow: hidden; }
+    .stage > img { position: absolute; left: 0; top: -210px; width: 1080px; height: auto; }
+    .tap { position: absolute; width: 0; height: 0; }
+    .tap i { position: absolute; left: -60px; top: -60px; width: 120px; height: 120px; border-radius: 50%; }
+    .tap .dot { background: rgba(255, 255, 255, 0.55); box-shadow: 0 0 0 3px rgba(0,0,0,.18); }
+    .tap .ring { background: rgba(255, 255, 255, 0.35); }
+  </style>
+  <div id="root" data-composition-id="custom" data-width="1080" data-height="1920">
+    <div id="cu-studio" class="clip scrw" data-start="0.00" data-duration="3.41" style="z-index:1" data-layout-allow-overflow><div id="cu-studio-in" class="scr"><img id="cu-studio-img" src="assets/screens/06-studio-full.png" alt=""><div id="cu-studio-stage" class="stage"><img id="cu-studio-stg" src="assets/screens/06-studio.png" alt=""></div></div></div><div id="cu-t1" class="clip tap" data-start="0.67" data-duration="0.72" style="left:540px;top:515px;z-index:30"><i id="cu-t1-r" class="ring"></i><i id="cu-t1-d" class="dot"></i></div><div id="cu-t2" class="clip tap" data-start="1.46" data-duration="0.72" style="left:296px;top:530px;z-index:30"><i id="cu-t2-r" class="ring"></i><i id="cu-t2-d" class="dot"></i></div><div id="cu-t3" class="clip tap" data-start="2.45" data-duration="0.72" style="left:540px;top:620px;z-index:30"><i id="cu-t3-r" class="ring"></i><i id="cu-t3-d" class="dot"></i></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#cu-studio-in", {opacity: 0, scale: 0.92}, {opacity: 1, scale: 1, duration: 0.3, ease: "power2.out"}, 0.00);
+    tl.fromTo("#cu-studio-img", {y: -1300}, {y: -2500, duration: 0.51, ease: "power3.out"}, 0.20);
+    tl.fromTo("#cu-t1-d", {scale: 0.4, opacity: 0}, {scale: 1, opacity: 1, duration: 0.08, ease: "power2.out"}, 0.72);
+    tl.fromTo("#cu-t1-r", {scale: 0.3, opacity: 0.9}, {scale: 2.6, opacity: 0, duration: 0.5, ease: "power2.out"}, 0.72);
+    tl.to("#cu-t1-d", {scale: 0.6, opacity: 0, duration: 0.14, ease: "power2.in"}, 0.84);
+    tl.to("#cu-studio-img", {y: -3700, duration: 0.70, ease: "power3.out"}, 0.76);
+    tl.fromTo("#cu-t2-d", {scale: 0.4, opacity: 0}, {scale: 1, opacity: 1, duration: 0.08, ease: "power2.out"}, 1.51);
+    tl.fromTo("#cu-t2-r", {scale: 0.3, opacity: 0.9}, {scale: 2.6, opacity: 0, duration: 0.5, ease: "power2.out"}, 1.51);
+    tl.to("#cu-t2-d", {scale: 0.6, opacity: 0, duration: 0.14, ease: "power2.in"}, 1.63);
+    tl.to("#cu-studio-img", {y: -4750, duration: 0.70, ease: "power3.out"}, 1.75);
+    tl.fromTo("#cu-t3-d", {scale: 0.4, opacity: 0}, {scale: 1, opacity: 1, duration: 0.08, ease: "power2.out"}, 2.50);
+    tl.fromTo("#cu-t3-r", {scale: 0.3, opacity: 0.9}, {scale: 2.6, opacity: 0, duration: 0.5, ease: "power2.out"}, 2.50);
+    tl.to("#cu-t3-d", {scale: 0.6, opacity: 0, duration: 0.14, ease: "power2.in"}, 2.62);
+    window.__timelines["custom"] = tl;
+  </script>
+</template>

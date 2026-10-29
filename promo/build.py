@@ -64,7 +64,7 @@ def scene(sid, start, end, body, js):
     .scr {{ position: absolute; inset: 0; overflow: hidden; background: #131a11; }}
     .scr > img {{ position: absolute; left: 0; top: 0; width: {W}px; height: auto; }}
     .stage {{ position: absolute; left: 0; top: 0; width: {W}px; height: 1000px; overflow: hidden; }}
-    .stage > img {{ position: absolute; left: 0; top: -200px; width: {W}px; height: auto; }}
+    .stage > img {{ position: absolute; left: 0; top: -210px; width: {W}px; height: auto; }}
     .tap {{ position: absolute; width: 0; height: 0; }}
     .tap i {{ position: absolute; left: -60px; top: -60px; width: 120px; height: 120px; border-radius: 50%; }}
     .tap .dot {{ background: rgba(255, 255, 255, 0.55); box-shadow: 0 0 0 3px rgba(0,0,0,.18); }}
@@ -198,7 +198,7 @@ scene('select', s, e,
       screen('se-studio', '06-studio', mk + 0.2, d - mk - 0.2, z=3) + m1 + m2,
       f'''{enter_fade_through("se-ref", 0)}
     {j1}
-    tl.fromTo("#se-sel-in", {{opacity: 0}}, {{opacity: 1, duration: 0.6, ease: "power1.inOut"}}, {st + 0.3:.2f});
+    tl.fromTo("#se-sel-in", {{opacity: 0}}, {{opacity: 1, duration: 0.12, ease: "power1.inOut"}}, {st + 0.3:.2f});
     {j2}
     {enter_container("se-studio", mk + 0.2, R["03-selection"]["creer"])}''')
 
@@ -211,13 +211,22 @@ order = [('bandeau', 'carte-bandeau-square', t(70)), ('vinyle', 'carte-vinyle-sq
          ('typo', 'carte-typo-square', t(73)), ('pochette', 'carte-pochette-square', t(74)), ('minimal', 'carte-minimal-square', t(78)), ('bandeau', 'carte-bandeau-square', t(82))]
 m0, j0 = tap('st-t0', 0.15, center(R['06-studio']['style']))
 body = screen('st-base', '06-studio', 0, 0.6) + screen('st-style', '07-studio-style-full', 0.35, d - 0.35, z=2, stage='07-studio-style') + m0
-js = [j0, enter_fade_through('st-style', 0.35), scroll('st-style', 0.8, SS, 0.7, start=0),
+tgt = lambda r: round(r['y'] + r['h'] / 2 + OFF - 1300)   # défilement qui place le bouton à y = 1300
+SS = tgt(R['07-studio-style']['bandeau'])
+js = [j0, enter_fade_through('st-style', 0.35), scroll('st-style', 0.8, SS, 0.45, start=0),
       f'tl.fromTo("#st-style-stage", {{y: -1000}}, {{y: -1000, duration: 0.01}}, 0.35);',
       f'tl.to("#st-style-stage", {{y: 0, duration: 0.35, ease: "power3.out"}}, 1.1);']
+body += f'<div id="st-mask" class="clip" data-start="{order[0][2] - s:.2f}" data-duration="{d - (order[0][2] - s):.2f}" style="position:absolute;left:{cvx - 20}px;top:{cvy - 20}px;width:{cv["w"] + 40}px;height:{cv["h"] + 40}px;background:#1a2317;border-radius:24px;z-index:7"></div>'
+curS = SS
 for i, (tpl, src, at) in enumerate(order):
     a = at - s
     b = (order[i + 1][2] - s) if i + 1 < len(order) else d
-    mm, jj = tap(f'st-t{i + 1}', a - 0.05, center(R['07-studio-style'][tpl], SS, page=True))
+    want = tgt(R['07-studio-style'][tpl])
+    if want != curS:
+        prev = (order[i - 1][2] - s) if i else 1.5
+        js.append(scroll('st-style', max(prev + 0.1, a - 0.4), want, min(0.3, a - 0.1 - max(prev + 0.1, a - 0.4)), 'power2.out'))
+        curS = want
+    mm, jj = tap(f'st-t{i + 1}', a - 0.05, center(R['07-studio-style'][tpl], curS, page=True))
     body += mm + card(f'st-c{i}', src, a, b - a, cvx, cvy, cv['w'], cv['h'], z=8)
     js += [jj, f'tl.fromTo("#st-c{i}", {{opacity: 0, scale: 0.94}}, {{opacity: 1, scale: 1, duration: 0.22, ease: "power2.out"}}, {a:.2f});']
 scene('styles', s, e, body, '\n    '.join(js))
@@ -242,7 +251,7 @@ scene('custom', s, e,
 # 8. Formats (Carré, Portrait, Story) → Partager → feuille de partage.
 s, e = t(96), t(107); d = e - s
 F = R['08-studio-format']; fcv = F['cv']; fst = F['stage']
-FS = 1450
+FS = round(F['square']['y'] + F['square']['h'] / 2 + OFF - 1250)
 fy = OFF + fcv['y'] - fst['y']
 boxes = {'square': (fcv['x'], fy, fcv['w'], fcv['h']),
          'portrait': (fcv['x'] + (fcv['w'] - fcv['h'] * 0.8) / 2, fy, fcv['h'] * 0.8, fcv['h']),
@@ -250,6 +259,7 @@ boxes = {'square': (fcv['x'], fy, fcv['w'], fcv['h']),
 seq = [('square', t(96)), ('portrait', t(97)), ('story', t(98))]
 m0, j0 = tap('fo-t0', 0.1, center(R['06-studio']['format']))
 body = screen('fo-base', '07-studio-style', 0, 0.55) + screen('fo-fmt', '08-studio-format-full', 0.3, d - 0.3, z=2, stage='08-studio-format') + m0
+body += f'<div id="fo-mask" class="clip" data-start="0.35" data-duration="{d - 0.35:.2f}" style="position:absolute;left:{fcv["x"] - 20}px;top:{fy - 20}px;width:{fcv["w"] + 40}px;height:{fcv["h"] + 40}px;background:#1a2317;border-radius:24px;z-index:7"></div>'
 js = [j0, enter_fade_through('fo-fmt', 0.3), scroll('fo-fmt', 0.3, FS, 0.01, start=FS)]
 for i, (k, at) in enumerate(seq):
     a = max(0.35, at - s)
@@ -279,7 +289,7 @@ scene('formats', s, e, body, '\n    '.join(js))
 # 9. Profil, puis mode avion (barre d'état) : tout reste disponible.
 s, e = t(107), t(122); d = e - s
 m1, j1 = tap('pr-t1', 0.1, center(R['01-accueil']['profil']))
-off = t(119) - s
+off = t(116) - s
 scene('profile', s, e,
       screen('pr-base', '08b-partager', 0, 0.55) + screen('pr-prof', '09-profil', 0.3, d - 0.3, z=2) + m1 +
       f'<div id="pr-snack" class="clip" data-start="{off:.2f}" data-duration="{d - off:.2f}" style="position:absolute;left:60px;right:60px;top:1440px;z-index:20"><div id="pr-snack-in" style="background:#eef3e4;color:#161f14;border-radius:18px;padding:30px 36px;font-family:Inter,sans-serif;font-size:36px;font-weight:600;box-shadow:0 12px 40px rgba(0,0,0,.4)">✈ Mode avion activé · Verso fonctionne toujours</div></div>',
@@ -312,7 +322,7 @@ scene('endcard', s, e,
 captions_file()
 
 # --- Barre d'état et barre de geste Android (au-dessus de tout) ------------
-airplane = t(119)
+airplane = t(116)
 chrome = f'''<div id="sysbar" class="clip" data-start="0" data-duration="{END}" data-track-index="4" style="position:absolute;left:0;top:0;width:{W}px;height:{OFF}px;z-index:60">
         <div id="sysbar-in" style="position:absolute;inset:0;font-family:Inter,sans-serif;font-size:30px;font-weight:700;color:#eef3e4">
           <span style="position:absolute;left:52px;top:22px">20:41</span>
