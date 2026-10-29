@@ -31,7 +31,7 @@ export const TEMPLATES = {
   typo: { label: 'Typographique' },
 };
 
-const baseMeta = { showTitle: true, showArtist: true, showCover: true, showSignature: false, signature: '', pos: 'bottom', align: 'left', size: 30, sigPos: 'bottom-right', color: '' };
+const baseMeta = { showLogo: true, showTitle: true, showArtist: true, showCover: true, showSignature: false, signature: '', pos: 'bottom', align: 'left', size: 30, sigPos: 'bottom-right', color: '' };
 const baseBg = { ambiance: 'anis', seed: 1, kind: 'solid', color: '#141218', color2: '#3b2d4f', angle: 135, texture: 'none', textureAlpha: 0.25, imgZoom: 1, imgX: 0, imgY: 0, blur: 0, veil: 0, veilMode: 'flat' };
 
 // Réglages par défaut de chaque modèle. Appliquer un modèle ne touche ni à l'extrait,
@@ -52,34 +52,34 @@ export function templatePreset(name) {
       break;
     case 'minimal':
       // Bandeaux derrière chaque ligne : la carte de paroles classique, sobre.
-      Object.assign(p, { font: 'inter', weight: 700, size: 60, color: '#111111', lineBg: '#ffffff', lineHeight: 1.5, posY: 0.5, accent: '#111111', hlMode: 'mark' });
-      p.bg = { ...baseBg, kind: 'gradient', color: '#2b3a24', color2: '#121a10', angle: 160, texture: 'grain', textureAlpha: 0.12 };
-      p.meta = { ...baseMeta, color: '#ffffff' };
+      Object.assign(p, { font: 'inter', weight: 700, size: 52, color: '#111111', lineBg: '#ffffff', lineHeight: 1.5, posY: 0.5, accent: '#111111', hlMode: 'mark' });
+      p.bg = { ...baseBg, kind: 'ambiance', ambiance: 'nuit', seed: 5, color: '#07070a', texture: 'grain', textureAlpha: 0.12 };
+      p.meta = { ...baseMeta, color: '#ffffff', font: 'inter' };
       break;
     case 'editorial':
       Object.assign(p, { font: 'playfair', weight: 400, italic: false, size: 64, color: '#1c1a16', lineHeight: 1.18, accent: '#b3401f', posY: 0.55, margin: 0.1 });
       p.bg = { ...baseBg, color: '#efe9dc', texture: 'grain', textureAlpha: 0.1 };
-      p.meta = { ...baseMeta, showCover: false, size: 26 };
+      p.meta = { ...baseMeta, showCover: false, size: 26, font: 'playfair' };
       break;
     case 'pochette':
       Object.assign(p, { font: 'inter', weight: 700, size: 50, align: 'center', color: '#0e0e0e', lineBg: '#ffffff', lineHeight: 1.48, posY: 0.5, accent: '#0e0e0e', hlMode: 'mark' });
-      p.bg = { ...baseBg, kind: 'cover', blur: 46, veil: 0.45, imgZoom: 1.15 };
-      p.meta = { ...baseMeta, showCover: false, align: 'center', color: '#ffffff' };
+      p.bg = { ...baseBg, kind: 'cover', blur: 46, veil: 0.45, imgZoom: 1.15, ambiance: 'crepuscule', seed: 2 };
+      p.meta = { ...baseMeta, showCover: false, align: 'left', color: '#ffffff', font: 'grotesk' };
       break;
     case 'photo':
       Object.assign(p, { font: 'lora', weight: 700, size: 58, color: '#ffffff', posY: 1, lineHeight: 1.2, shadow: true, accent: '#cce988' });
-      p.bg = { ...baseBg, kind: 'photo', veil: 0.75, veilMode: 'gradient' };
-      p.meta = { ...baseMeta, pos: 'top' };
+      p.bg = { ...baseBg, kind: 'photo', veil: 0.75, veilMode: 'gradient', ambiance: 'lagune', seed: 4 };
+      p.meta = { ...baseMeta, pos: 'top', font: 'lora', color: '#ffffff' };
       break;
     case 'vinyle':
-      Object.assign(p, { font: 'dmserif', weight: 400, size: 56, align: 'left', color: '#f6e9d7', accent: '#ff8a4c', posY: 1, lineHeight: 1.15 });
-      p.bg = { ...baseBg, kind: 'gradient', color: '#3a1d12', color2: '#0f0b09', angle: 200, texture: 'grain', textureAlpha: 0.16 };
-      p.meta = { ...baseMeta, showCover: false };
+      Object.assign(p, { font: 'dmserif', weight: 400, size: 56, align: 'left', color: '#f6e9d7', accent: '#ffd98a', posY: 1, lineHeight: 1.15 });
+      p.bg = { ...baseBg, kind: 'ambiance', ambiance: 'braise', seed: 6, color: '#1a0c08', texture: 'grain', textureAlpha: 0.16 };
+      p.meta = { ...baseMeta, showCover: false, font: 'dmserif' };
       break;
     case 'typo':
       Object.assign(p, { font: 'bebas', weight: 400, size: 150, uppercase: true, lineHeight: 0.92, color: '#f1f1ee', accent: '#cce988', dimOthers: true, posY: 0.5, autoFit: true, margin: 0.07 });
-      p.bg = { ...baseBg, color: '#0f130e', texture: 'grain', textureAlpha: 0.14 };
-      p.meta = { ...baseMeta, showCover: false, size: 28 };
+      p.bg = { ...baseBg, color: '#0f130e', texture: 'grain', textureAlpha: 0.14, ambiance: 'anis' };
+      p.meta = { ...baseMeta, showCover: false, size: 28, font: 'bebas' };
       break;
   }
   return p;
@@ -98,7 +98,7 @@ function fontString(style, size, bold) {
 }
 
 // Logo de l'application (fichier d'origine, non modifié), affiché dans le bandeau.
-let brandImg = null, brandLight = null, brandLoading = null;
+let brandImg = null, brandLight = null, brandIcon = null, brandLoading = null;
 // Variante pour fond sombre : seul le mot « verso » (à droite du symbole) passe en blanc.
 function makeLightBrand(img) {
   const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
@@ -113,7 +113,8 @@ function makeLightBrand(img) {
 }
 export function loadBrand() {
   if (brandImg || brandLoading) return brandLoading || Promise.resolve(brandImg);
-  brandLoading = new Promise(res => { const i = new Image(); i.onload = () => { brandImg = i; try { brandLight = makeLightBrand(i); } catch { brandLight = i; } res(i); }; i.onerror = () => res(null); i.src = new URL('../icons/logo.png', import.meta.url).href; });
+  brandLoading = new Promise(res => { const i = new Image(); i.onload = () => { brandImg = i; try { brandLight = makeLightBrand(i); } catch { brandLight = i; } res(i); }; i.onerror = () => res(null); i.src = new URL('../icons/logo.png', import.meta.url).href;
+    const ic = new Image(); ic.onload = () => { brandIcon = ic; }; ic.src = new URL('../icons/icon.png', import.meta.url).href; });
   return brandLoading;
 }
 
@@ -340,12 +341,12 @@ export function renderCard(canvas, card, imgs = {}, opts = {}) {
     ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.55)'; ctx.shadowBlur = 60 * kr; ctx.shadowOffsetY = 24 * kr;
     ctx.fillStyle = '#000'; roundRect(ctx, x, top, s, s, 10); ctx.fill();
     ctx.restore();
-    drawCoverSquare(ctx, imgs.cover, x, top, s, 10, st.accent);
+    drawCoverSquare(ctx, imgs.cover || imgs.photo || brandIcon, x, top, s, 10, st.accent);
     top += s + 56;
   } else if (tpl === 'vinyle') {
     // Disque à moitié hors cadre, en haut à droite.
     const R = Math.min(W * 0.4, H * 0.24);
-    drawVinyl(ctx, W - R * 0.62, m + R * 0.78, R, imgs.cover, st.accent);
+    drawVinyl(ctx, W - R * 0.62, m + R * 0.78, R, imgs.cover || imgs.photo || brandIcon, st.accent);
     top = m + R * 1.78 + 40;
   }
 
@@ -354,7 +355,9 @@ export function renderCard(canvas, card, imgs = {}, opts = {}) {
   const metaLines = [];
   if (meta.showTitle && card.title) metaLines.push({ t: card.title, kind: 'title' });
   if (meta.showArtist && card.artist) metaLines.push({ t: card.artist, kind: 'artist' });
-  const metaFont = l => l.kind === 'title' ? `700 ${ms * 1.12}px Inter, system-ui` : `500 ${ms * 0.82}px Inter, system-ui`;
+  const mfont = fontById(meta.font || 'inter'), mfam = mfont.system ? mfont.family : `"${mfont.family}"`;
+  const mBold = meta.weight || Math.max(...mfont.weights), mLight = Math.min(...mfont.weights);
+  const metaFont = l => l.kind === 'title' ? `${mBold} ${ms * 1.12}px ${mfam}, Inter, system-ui` : `${mLight} ${ms * 0.82}px ${mfam}, Inter, system-ui`;
   const lineGap = ms * 1.45;
   const thumb = meta.showCover && imgs.cover ? ms * 2.9 : 0;
   const metaH = Math.max(metaLines.length * lineGap, thumb);
@@ -363,6 +366,20 @@ export function renderCard(canvas, card, imgs = {}, opts = {}) {
   const sigH = meta.showSignature && meta.signature ? ms * 1.6 : 0;
   if (sigH && !meta.band) { if (meta.sigPos.startsWith('top')) top += sigH + 24; else bottom -= sigH + 24; }
   const showLogo = meta.band && meta.showLogo !== false && brandImg;
+  // Logo en coin (modèles sans bandeau), en bas à droite.
+  const cornerLogo = !meta.band && meta.showLogo !== false && brandImg;
+  const cLh = 54, cLw = cornerLogo ? cLh * brandImg.width / brandImg.height : 0;
+  if (cornerLogo && !(meta.pos === 'bottom' && meta.align === 'left' && metaH > 0)) bottom -= cLh + 30;
+  if (cornerLogo) {
+    // Couleur du fond sous le logo, lue sur l'image déjà dessinée, pour choisir la version claire ou sombre.
+    let dark = true;
+    try {
+      const d = ctx.getImageData(Math.max(0, (W - m - cLw) * kr), Math.max(0, (H - m - cLh) * kr), Math.max(1, cLw * kr), Math.max(1, cLh * kr)).data;
+      let sum = 0, n = 0; for (let i = 0; i < d.length; i += 16) { sum += 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; n++; }
+      dark = sum / n < 140;
+    } catch {}
+    ctx.drawImage(dark ? brandLight || brandImg : brandImg, W - m - cLw, H - m - cLh, cLw, cLh);
+  }
   const band = meta.band && (meta.showTitle || meta.showArtist || (meta.showSignature && meta.signature) || showLogo);
   const bandH = band ? Math.max(150, ms * 5) : 0;
   if (band) bottom = H - bandH - 30;
@@ -454,7 +471,7 @@ export function renderCard(canvas, card, imgs = {}, opts = {}) {
       ctx.globalAlpha = l.kind === 'title' ? 1 : 0.72;
       if (l.kind === 'artist') setSpacing(ctx, ms * 0.12);
       const lx = thumb ? bx : meta.align === 'center' ? (W - widths[i]) / 2 : meta.align === 'right' ? W - m - widths[i] : bx;
-      ctx.fillText(l.kind === 'artist' ? l.t.toLocaleUpperCase('fr') : l.t, lx, ty - ms * 0.4, Math.max(10, W - m - lx));
+      ctx.fillText(l.kind === 'artist' ? l.t.toLocaleUpperCase('fr') : l.t, lx, ty - ms * 0.4, Math.max(10, W - m - lx - (cornerLogo && meta.pos === 'bottom' ? cLw + 30 : 0)));
       setSpacing(ctx, 0);
       ctx.globalAlpha = 1;
     });
