@@ -1,4 +1,5 @@
 import { db, uid } from './db.js';
+import { findArtwork, fetchImage } from './sources.js';
 import { FORMATS, FONTS, TEMPLATES, TEXTURES, AMBIANCES, fontById, templatePreset, renderCard, ensureFonts, blobToBitmap, extractPalette, compressImage, splitExcerpt } from './render.js';
 import { esc, toast, safe, go, openDialog, confirmDialog, download, pickArtwork } from './app.js';
 
@@ -26,7 +27,7 @@ const slug = s => s.replace(/œ/g, 'oe').replace(/Œ/g, 'Oe').replace(/æ/g, 'ae
 const defaultName = c => slug(`${c.artist || 'Verso'} - ${c.title || 'carte'}`);
 
 async function loadImages(card) {
-  return { cover: await blobToBitmap(card.images.cover), photo: await blobToBitmap(card.images.photo) };
+  return { cover: await blobToBitmap(card.images.cover), photo: await blobToBitmap(card.images.photo), label: await blobToBitmap(card.images.label) };
 }
 
 export async function cardToBlob(card, imgs, type = 'image/png', quality = 0.92) {
@@ -252,6 +253,10 @@ export async function mountStudio(view, id) {
     return `
       <div class="tpls field">${Object.entries(TEMPLATES).map(([k, t]) => `<button data-tpl="${k}" class="${card.template === k ? 'on' : ''}"><canvas data-mini="${k}"></canvas>${t.label}</button>`).join('')}</div>
       <p class="small muted">Changer de modèle conserve l'extrait, le titre, l'artiste et les images.</p>
+      ${card.template === 'vinyle' ? `<div class="card-box field"><h3>Image du disque</h3>
+        <p class="small muted">${card.images.label ? 'Image : ' + esc(card.labelCredit || 'personnalisée') : card.images.cover ? 'Pochette du morceau' : 'Aucune pochette trouvée : icône Verso'}</p>
+        <div class="row"><button id="v-art">🎵 Image de l'artiste</button><label class="btn" style="margin:0;color:inherit">🖼 Ma galerie<input type="file" id="v-photo" accept="image/*" hidden></label>
+        ${card.images.label ? '<button class="ghost danger" id="v-reset">Remettre la pochette</button>' : ''}</div></div>` : ''}
       <div class="card-box field"><h3>Informations affichées</h3>
         <div class="row field"><button class="chip ${m.showTitle ? 'on' : ''}" data-mt="showTitle">Titre</button><button class="chip ${m.showArtist ? 'on' : ''}" data-mt="showArtist">Artiste</button>
           <button class="chip ${m.showCover ? 'on' : ''}" data-mt="showCover">Pochette</button><button class="chip ${m.showSignature ? 'on' : ''}" data-mt="showSignature">Signature</button></div>
@@ -401,7 +406,12 @@ export async function mountStudio(view, id) {
       if (card.style.bg.kind === 'photo' && !card.images.photo) card.style.bg.kind = card.images.cover ? 'cover' : 'ambiance';
       if (card.style.bg.kind === 'cover' && !card.images.cover) card.style.bg.kind = card.images.photo ? 'photo' : 'ambiance';
       change(); refreshPanel();
+      if (card.template === 'vinyle') autoAlbumCover();
     });
+    const setLabel = async (blob, credit) => { card.images.label = blob; card.labelCredit = credit; imgs.label = await blobToBitmap(blob); change(); refreshPanel(); };
+    on('#v-art', 'onclick', async () => { const song = card.songId ? await db.get('songs', card.songId) : null; const r = await pickArtwork(song ? song.title : card.title, song ? song.artist : card.artist); if (r) setLabel(r.blob, r.label); });
+    on('#v-photo', 'onchange', async e => { const f = e.target.files[0]; if (!f) return; try { setLabel(await compressImage(f, 1200), 'ma galerie'); } catch (err) { toast(err.message, { err: true }); } });
+    on('#v-reset', 'onclick', () => { card.images.label = null; card.labelCredit = ''; imgs.label = null; change(); refreshPanel(); });
     p.querySelectorAll('[data-mt]').forEach(b => b.onclick = () => { m[b.dataset.mt] = !m[b.dataset.mt]; change(); refreshPanel(); });
     on('#m-sig', 'oninput', e => { m.signature = e.target.value; change(); });
     on('#m-sigpos', 'onchange', e => { m.sigPos = e.target.value; change(); });
@@ -515,6 +525,26 @@ export async function mountStudio(view, id) {
     if (r) usePhoto(r.blob, r.label);
   };
   $('#q-photo').onchange = e => { usePhoto(e.target.files[0]); e.target.value = ''; };
+
+  // Vinyle : sans pochette, on va chercher automatiquement celle de l'album (Deezer).
+  async function autoAlbumCover() {
+    if (card.images.label || card.images.cover || card.autoCoverTried) return;
+    card.autoCoverTried = true;
+    const song = card.songId ? await db.get('songs', card.songId) : null;
+    const title = song ? song.title : card.title, artist = song ? song.artist : card.artist;
+    if (!artist || !navigator.onLine) return;
+    try {
+      const res = await findArtwork(title, artist);
+      const im = res.images.find(i => i.kind === 'album');
+      if (!im) return;
+      const blob = await compressImage(await fetchImage(im.url), 1200);
+      card.images.label = blob; card.labelCredit = im.label + ' (Deezer)';
+      imgs.label = await blobToBitmap(blob);
+      change(); if (tab === 'style') refreshPanel();
+      toast('Pochette de l\'album placée sur le disque (modifiable dans Style).');
+    } catch { /* hors connexion ou introuvable : l'icône Verso reste sur le disque */ }
+  }
+  if (card.template === 'vinyle') autoAlbumCover();
 
   const onResize = () => draw();
   window.addEventListener('resize', onResize);

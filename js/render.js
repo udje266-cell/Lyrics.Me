@@ -346,7 +346,7 @@ export function renderCard(canvas, card, imgs = {}, opts = {}) {
   } else if (tpl === 'vinyle') {
     // Disque à moitié hors cadre, en haut à droite.
     const R = Math.min(W * 0.4, H * 0.24);
-    drawVinyl(ctx, W - R * 0.62, m + R * 0.78, R, imgs.cover || imgs.photo || brandIcon, st.accent);
+    drawVinyl(ctx, W - R * 0.62, m + R * 0.78, R, imgs.label || imgs.cover || brandIcon, st.accent);
     top = m + R * 1.78 + 40;
   }
 
