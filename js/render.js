@@ -48,7 +48,7 @@ export function templatePreset(name) {
       // Image plein cadre, lignes sur bandes blanches, bandeau d'informations en bas.
       Object.assign(p, { font: 'inter', weight: 400, size: 54, color: '#0b0b0b', lineBg: '#ffffff', lineHeight: 1.6, posY: 1, margin: 0.055, accent: '#0b0b0b', hlMode: 'bold' });
       p.bg = { ...baseBg, kind: 'ambiance', ambiance: 'anis', seed: 3, color: '#141c12', texture: 'grain', textureAlpha: 0.16 };
-      p.meta = { ...baseMeta, showCover: false, band: '#000000', color: '#ffffff', size: 30, showSignature: true };
+      p.meta = { ...baseMeta, showCover: false, band: '#0b0f0a', color: '#ffffff', size: 30, showSignature: true, bandStyle: 'duo', font: 'grotesk' };
       break;
     case 'minimal':
       // Bandeaux derrière chaque ligne : la carte de paroles classique, sobre.
@@ -101,6 +101,8 @@ export async function ensureFonts(style) {
   if (!document.fonts) return;
   const f = fontById(style.font);
   const loads = [];
+  const mf = style.meta && style.meta.font ? fontById(style.meta.font) : null;
+  if (mf) for (const w of mf.weights) loads.push(document.fonts.load(`${w} 40px "${mf.family}"`, 'Aé'));
   for (const w of f.weights) loads.push(document.fonts.load(`${style.italic ? 'italic ' : ''}${w} 40px "${f.family}"`, 'Aéçœ'));
   loads.push(document.fonts.load('700 40px "Inter"', 'Aé'), document.fonts.load('400 40px "Inter"', 'Aé'), document.fonts.load('500 40px "Caveat"', 'Aé'));
   try { await Promise.all(loads); } catch { /* police système utilisée en repli */ }
@@ -437,26 +439,63 @@ export function renderCard(canvas, card, imgs = {}, opts = {}) {
   }
   if (band) {
     const by = H - bandH;
-    ctx.fillStyle = meta.band; ctx.fillRect(0, by, W, bandH);
-    ctx.fillStyle = metaColor; ctx.globalAlpha = 0.9; ctx.fillRect(0, by, W, 3); ctx.globalAlpha = 1;
-    const parts = [];
-    if (meta.showArtist && card.artist) parts.push(card.artist);
-    if (meta.showTitle && card.title) parts.push(`« ${card.title} »`);
-    const label = parts.join(', ').toLocaleUpperCase('fr');
-    const fs = ms * 1.05;
-    ctx.font = `600 ${fs}px Inter, system-ui`; ctx.textAlign = 'left'; ctx.fillStyle = metaColor;
-    const maxLW = sigH ? W * 0.52 : W - 2 * m;
-    // Retour à la ligne du libellé (2 lignes max, réduit si nécessaire).
-    const words = label.split(' '); const rows = []; let cur = '';
-    for (const w of words) { const t = cur ? cur + ' ' + w : w; if (cur && ctx.measureText(t).width > maxLW) { rows.push(cur); cur = w; } else cur = t; }
-    if (cur) rows.push(cur);
-    const shown = rows.slice(0, 2); if (rows.length > 2) shown[1] = rows.slice(1).join(' ');
-    let ly = by + bandH / 2 - (shown.length - 1) * fs * 0.6 + fs * 0.36;
-    for (const r of shown) { ctx.fillText(r, m, ly, maxLW); ly += fs * 1.2; }
-    if (sigH) {
-      ctx.font = `600 ${ms * 0.95}px "Space Grotesk", Inter, sans-serif`; setSpacing(ctx, ms * 0.35);
-      ctx.textAlign = 'right'; ctx.fillText(meta.signature.toLocaleUpperCase('fr'), W - m, by + bandH / 2 + ms * 0.34, W * 0.36);
+    const layout = meta.bandStyle || 'duo';
+    const mf = fontById(meta.font || 'grotesk');
+    const fam = mf.system ? mf.family : `"${mf.family}"`;
+    const mw = meta.weight || Math.max(...mf.weights);
+    const light = mf.weights.length > 1 ? Math.min(...mf.weights) : mw;
+    const acc = meta.bandAccent || '#cce988';
+    const bandColor = layout === 'etiquette' ? acc : meta.band;
+    const ink = layout === 'etiquette' ? '#0b0f0a' : metaColor;
+    ctx.fillStyle = bandColor; ctx.fillRect(0, by, W, bandH);
+    const title = meta.showTitle ? card.title || '' : '', artist = meta.showArtist ? card.artist || '' : '';
+    const maxLW = (sigH ? W * 0.62 : W - 2 * m);
+    const cy = by + bandH / 2;
+    ctx.fillStyle = ink; ctx.textAlign = 'left';
+    if (layout === 'duo') {
+      // Titre en grand, artiste en dessous, petit trait d'accent à gauche.
+      ctx.fillStyle = acc; ctx.fillRect(m, cy - ms * 1.15, 6, ms * 2.3);
+      ctx.fillStyle = ink;
+      const x = m + 28;
+      const both = title && artist;
+      ctx.font = `${mw} ${ms * 1.25}px ${fam}, Inter, sans-serif`;
+      if (title) ctx.fillText(title, x, both ? cy - ms * 0.12 : cy + ms * 0.42, maxLW - 28);
+      ctx.font = `${light} ${ms * 0.9}px ${fam}, Inter, sans-serif`; ctx.globalAlpha = 0.75;
+      if (artist) ctx.fillText(artist, x, both ? cy + ms * 1.05 : cy + ms * 0.32, maxLW - 28);
+      ctx.globalAlpha = 1;
+    } else if (layout === 'ligne') {
+      // Une seule ligne centrée : Titre — Artiste.
+      const t = [title, artist].filter(Boolean).join('  —  ');
+      ctx.font = `${mw} ${ms * 1.05}px ${fam}, Inter, sans-serif`;
+      ctx.textAlign = sigH ? 'left' : 'center';
+      ctx.fillText(t, sigH ? m : W / 2, cy + ms * 0.36, maxLW);
+    } else if (layout === 'etiquette') {
+      // Bandeau de couleur d'accent, titre en capitales espacées.
+      setSpacing(ctx, ms * 0.18);
+      ctx.font = `${mw} ${ms * 1.2}px ${fam}, Inter, sans-serif`;
+      const t = title.toLocaleUpperCase('fr');
+      ctx.fillText(t, m, artist ? cy - ms * 0.15 : cy + ms * 0.4, maxLW);
+      setSpacing(ctx, ms * 0.05);
+      ctx.font = `${light} ${ms * 0.9}px ${fam}, Inter, sans-serif`;
+      if (artist) ctx.fillText(artist, m, cy + ms * 1.05, maxLW);
       setSpacing(ctx, 0);
+    } else {
+      // Capitales : ARTISTE, « TITRE » sur deux lignes au plus.
+      ctx.globalAlpha = 0.9; ctx.fillRect(0, by, W, 3); ctx.globalAlpha = 1;
+      const label = [artist, title && `« ${title} »`].filter(Boolean).join(', ').toLocaleUpperCase('fr');
+      const fs = ms * 1.05;
+      ctx.font = `${mw} ${fs}px ${fam}, Inter, sans-serif`;
+      const rows = []; let cur = '';
+      for (const w of label.split(' ')) { const t = cur ? cur + ' ' + w : w; if (cur && ctx.measureText(t).width > maxLW) { rows.push(cur); cur = w; } else cur = t; }
+      if (cur) rows.push(cur);
+      const shown = rows.slice(0, 2); if (rows.length > 2) shown[1] = rows.slice(1).join(' ');
+      let ly = cy - (shown.length - 1) * fs * 0.6 + fs * 0.36;
+      for (const r of shown) { ctx.fillText(r, m, ly, maxLW); ly += fs * 1.2; }
+    }
+    if (sigH) {
+      ctx.fillStyle = ink;
+      ctx.font = `500 ${ms * 1.35}px Caveat, cursive`;
+      ctx.textAlign = 'right'; ctx.fillText(meta.signature, W - m, cy + ms * 0.42, W * 0.3);
     }
   } else if (sigH) {
     ctx.font = `500 ${ms * 1.3}px Caveat, cursive`;
