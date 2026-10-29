@@ -34,7 +34,7 @@ python3 -m http.server 8080
 
 ### Adresse en ligne (GitHub Pages)
 
-Une fois GitHub Pages activé (Settings → Pages → « Deploy from a branch » → branche `ccr-73841f22-0i93p9`, dossier `/ (root)`) : **https://udje266-cell.github.io/Lyrics.Me/**
+**https://udje266-cell.github.io/Lyrics.Me/** — publiée depuis la branche `ccr-73841f22-0i93p9`, dossier `/ (root)` (Settings → Pages). Chaque envoi sur cette branche met le site à jour.
 
 ### L'utiliser sur votre téléphone
 
