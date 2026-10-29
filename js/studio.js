@@ -1,5 +1,5 @@
 import { db, uid } from './db.js';
-import { FORMATS, FONTS, TEMPLATES, TEXTURES, fontById, templatePreset, renderCard, ensureFonts, blobToBitmap, extractPalette, compressImage, splitExcerpt } from './render.js';
+import { FORMATS, FONTS, TEMPLATES, TEXTURES, AMBIANCES, fontById, templatePreset, renderCard, ensureFonts, blobToBitmap, extractPalette, compressImage, splitExcerpt } from './render.js';
 import { esc, toast, safe, go, openDialog, confirmDialog, download } from './app.js';
 
 const clone = o => JSON.parse(JSON.stringify(o));
@@ -8,7 +8,7 @@ export async function newCard(song, excerpt, extra = {}) {
   const signature = await db.setting('signature', '');
   const template = extra.template || 'bandeau';
   const style = extra.style ? clone(extra.style) : templatePreset(template);
-  if (style.bg.kind === 'cover' && !(song && song.cover)) style.bg.kind = 'gradient';
+  if (style.bg.kind === 'cover' && !(song && song.cover)) style.bg.kind = 'ambiance';
   if (signature) style.meta.signature = style.meta.signature || signature;
   const now = Date.now();
   const card = {
@@ -220,7 +220,9 @@ export async function mountStudio(view, id) {
     const bg = card.style.bg;
     const hasImg = bg.kind === 'cover' || bg.kind === 'photo';
     return `
-      <div class="field">${seg('bgkind', [['solid', 'Uni'], ['gradient', 'Dégradé'], ['cover', 'Pochette'], ['photo', 'Photo']], bg.kind)}</div>
+      <div class="field">${seg('bgkind', [['ambiance', 'Ambiance'], ['solid', 'Uni'], ['gradient', 'Dégradé'], ['cover', 'Pochette'], ['photo', 'Ma photo']], bg.kind)}</div>
+      ${bg.kind === 'ambiance' ? `<div class="field"><div class="chips" style="flex-wrap:wrap">${Object.entries(AMBIANCES).map(([k, a]) => `<button class="chip ${bg.ambiance === k ? 'on' : ''}" data-amb="${k}"><span class="swatch" style="width:18px;height:18px;min-height:0;background:linear-gradient(135deg,${a.blobs[0]},${a.blobs[1]})"></span>${a.label}</button>`).join('')}</div>
+        <button style="margin-top:8px" id="b-shuffle">Autre variation ↻</button></div>` : ''}
       ${bg.kind === 'cover' && !card.images.cover ? '<div class="notice err field">Ce morceau n\'a pas de pochette. Ajoutez-en une dans la fiche du morceau, ou importez une photo.</div>' : ''}
       ${bg.kind === 'photo' || !card.images.photo ? `<div class="field row"><label class="btn ${bg.kind === 'photo' && !card.images.photo ? 'primary' : ''}" style="margin:0;color:inherit">${card.images.photo ? 'Changer de photo' : 'Importer une photo'}<input type="file" id="b-photo" accept="image/*" hidden></label>
         ${card.images.photo ? '<button class="ghost danger" id="b-nophoto">Retirer la photo</button>' : ''}</div>` : ''}
@@ -349,6 +351,8 @@ export async function mountStudio(view, id) {
       change(); refreshPanel();
     });
     // Fond
+    p.querySelectorAll('[data-amb]').forEach(b => b.onclick = () => { bg.ambiance = b.dataset.amb; const a = AMBIANCES[bg.ambiance]; bg.color = a.base; if (st.lineBg) { const light = bg.ambiance === 'rose'; st.lineBg = light ? '#161616' : '#ffffff'; st.color = light ? '#ffffff' : '#0b0b0b'; } else if (bg.ambiance === 'rose') st.color = '#2a1a1c'; change(); refreshPanel(); });
+    on('#b-shuffle', 'onclick', () => { bg.seed = (bg.seed || 1) + 1; change(); });
     on('#b-c1', 'oninput', e => { bg.color = e.target.value; change(); });
     on('#b-c2', 'oninput', e => { bg.color2 = e.target.value; change(); });
     on('#b-tex', 'onchange', e => { bg.texture = e.target.value; change(); refreshPanel(); });
@@ -378,7 +382,8 @@ export async function mountStudio(view, id) {
     p.querySelectorAll('[data-mini]').forEach(async c => {
       const k = c.dataset.mini;
       const preview = { ...card, template: k, format: 'square', style: templatePreset(k), excerpt: 'Toutes les lignes\nque je garde', title: 'Titre', artist: 'Artiste' };
-      if (k === 'photo' && !imgs.photo) preview.style.bg.kind = imgs.cover ? 'cover' : 'gradient';
+      if (k === 'photo' && !imgs.photo) preview.style.bg.kind = imgs.cover ? 'cover' : 'ambiance';
+      if (k === 'pochette' && !imgs.cover) preview.style.bg.kind = 'ambiance';
       await ensureFonts(preview.style);
       renderCard(c, preview, imgs, { scale: 0.1 });
     });
@@ -387,8 +392,8 @@ export async function mountStudio(view, id) {
       card.template = b.dataset.tpl;
       card.style = templatePreset(card.template);
       Object.assign(card.style.meta, keep);
-      if (card.style.bg.kind === 'photo' && !card.images.photo) card.style.bg.kind = card.images.cover ? 'cover' : 'gradient';
-      if (card.style.bg.kind === 'cover' && !card.images.cover) card.style.bg.kind = card.images.photo ? 'photo' : 'gradient';
+      if (card.style.bg.kind === 'photo' && !card.images.photo) card.style.bg.kind = card.images.cover ? 'cover' : 'ambiance';
+      if (card.style.bg.kind === 'cover' && !card.images.cover) card.style.bg.kind = card.images.photo ? 'photo' : 'ambiance';
       change(); refreshPanel();
     });
     p.querySelectorAll('[data-mt]').forEach(b => b.onclick = () => { m[b.dataset.mt] = !m[b.dataset.mt]; change(); refreshPanel(); });
@@ -420,7 +425,7 @@ export async function mountStudio(view, id) {
     on('#s-reset', 'onclick', () => {
       const keep = { signature: m.signature };
       card.style = templatePreset(card.template); Object.assign(card.style.meta, keep);
-      if (card.style.bg.kind === 'photo' && !card.images.photo) card.style.bg.kind = 'gradient';
+      if (card.style.bg.kind === 'photo' && !card.images.photo) card.style.bg.kind = 'ambiance';
       change(); refreshPanel(); toast('Style réinitialisé (↶ pour annuler)');
     });
     // Format et export

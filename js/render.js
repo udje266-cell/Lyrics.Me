@@ -32,7 +32,7 @@ export const TEMPLATES = {
 };
 
 const baseMeta = { showTitle: true, showArtist: true, showCover: true, showSignature: false, signature: '', pos: 'bottom', align: 'left', size: 30, sigPos: 'bottom-right', color: '' };
-const baseBg = { kind: 'solid', color: '#141218', color2: '#3b2d4f', angle: 135, texture: 'none', textureAlpha: 0.25, imgZoom: 1, imgX: 0, imgY: 0, blur: 0, veil: 0, veilMode: 'flat' };
+const baseBg = { ambiance: 'anis', seed: 1, kind: 'solid', color: '#141218', color2: '#3b2d4f', angle: 135, texture: 'none', textureAlpha: 0.25, imgZoom: 1, imgX: 0, imgY: 0, blur: 0, veil: 0, veilMode: 'flat' };
 
 // Réglages par défaut de chaque modèle. Appliquer un modèle ne touche ni à l'extrait,
 // ni au titre, ni à l'artiste, ni aux images de la carte.
@@ -47,7 +47,7 @@ export function templatePreset(name) {
     case 'bandeau':
       // Image plein cadre, lignes sur bandes blanches, bandeau d'informations en bas.
       Object.assign(p, { font: 'inter', weight: 400, size: 54, color: '#0b0b0b', lineBg: '#ffffff', lineHeight: 1.6, posY: 1, margin: 0.055, accent: '#0b0b0b', hlMode: 'bold' });
-      p.bg = { ...baseBg, kind: 'cover', color: '#2b3a24', veil: 0 };
+      p.bg = { ...baseBg, kind: 'ambiance', ambiance: 'anis', seed: 3, color: '#141c12', texture: 'grain', textureAlpha: 0.16 };
       p.meta = { ...baseMeta, showCover: false, band: '#000000', color: '#ffffff', size: 30, showSignature: true };
       break;
     case 'minimal':
@@ -161,6 +161,34 @@ function loadTexture(kind) {
   return c;
 }
 const textureCache = {};
+// Fonds « Ambiance » : taches de couleur floues générées, sans aucune image extérieure.
+export const AMBIANCES = {
+  anis: { label: 'Anis', base: '#141c12', blobs: ['#cce988', '#4f7a2a', '#1f3a1c', '#9fcf5a'] },
+  lagune: { label: 'Lagune', base: '#0b1d24', blobs: ['#2fb5a8', '#0f5c6e', '#f2c36b', '#1a3b5c'] },
+  crepuscule: { label: 'Crépuscule', base: '#1d1024', blobs: ['#ff7a59', '#b23a7a', '#ffc46b', '#4a1f6b'] },
+  braise: { label: 'Braise', base: '#1a0c08', blobs: ['#ff5a2a', '#8a1f12', '#ffb347', '#3d120c'] },
+  ocean: { label: 'Océan', base: '#08111f', blobs: ['#3a7bff', '#123a7a', '#7fe0ff', '#1b2350'] },
+  rose: { label: 'Poudre', base: '#f3e6e4', blobs: ['#f7b2b7', '#e8d3a8', '#c9a7e3', '#ffffff'] },
+  nuit: { label: 'Nuit', base: '#07070a', blobs: ['#2a2a3a', '#4b3b6b', '#14141c', '#3a2f2a'] },
+};
+
+function drawAmbiance(ctx, bg, W, H) {
+  const a = AMBIANCES[bg.ambiance] || AMBIANCES.anis;
+  ctx.fillStyle = a.base; ctx.fillRect(0, 0, W, H);
+  let seed = (bg.seed || 1) * 9301 + 49297;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter' === bg.blend ? 'lighter' : 'source-over';
+  for (let i = 0; i < 7; i++) {
+    const col = a.blobs[i % a.blobs.length];
+    const x = rnd() * W, y = rnd() * H, r = (0.35 + rnd() * 0.45) * Math.max(W, H);
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, col + 'cc'); g.addColorStop(0.5, col + '44'); g.addColorStop(1, col + '00');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  }
+  ctx.restore();
+}
+
 export const TEXTURES = { none: 'Aucune', grain: 'Grain', papier: 'Papier', lignes: 'Lignes', points: 'Points' };
 
 function drawImageCover(ctx, img, W, H, bg) {
@@ -176,6 +204,7 @@ function drawBackground(ctx, card, imgs, W, H, k) {
   const img = bg.kind === 'cover' ? imgs.cover : bg.kind === 'photo' ? imgs.photo : null;
   ctx.fillStyle = bg.color;
   ctx.fillRect(0, 0, W, H);
+  if (bg.kind === 'ambiance') drawAmbiance(ctx, bg, W, H);
   if (bg.kind === 'gradient') {
     const a = (bg.angle || 0) * Math.PI / 180;
     const r = Math.hypot(W, H) / 2;
