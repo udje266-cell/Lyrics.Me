@@ -47,10 +47,36 @@ function tx(store, mode, fn) {
   }));
 }
 
+// Les images sont stockées en octets bruts ({ __bin, type }) et non en Blob : la vue web
+// d'Android refuse souvent d'enregistrer des Blob dans IndexedDB (« InvalidBlob »).
+// La conversion est faite ici, de façon transparente pour le reste de l'application.
+async function pack(v) {
+  if (v instanceof Blob) return { __bin: await v.arrayBuffer(), type: v.type };
+  if (Array.isArray(v)) return Promise.all(v.map(pack));
+  if (v && typeof v === 'object' && !(v instanceof ArrayBuffer) && !ArrayBuffer.isView(v)) {
+    const o = {};
+    for (const [k, x] of Object.entries(v)) o[k] = await pack(x);
+    return o;
+  }
+  return v;
+}
+function unpack(v) {
+  if (v && typeof v === 'object') {
+    if (v.__bin instanceof ArrayBuffer) return new Blob([v.__bin], { type: v.type || '' });
+    if (Array.isArray(v)) return v.map(unpack);
+    if (!(v instanceof Blob) && !(v instanceof ArrayBuffer) && !ArrayBuffer.isView(v)) {
+      const o = {};
+      for (const [k, x] of Object.entries(v)) o[k] = unpack(x);
+      return o;
+    }
+  }
+  return v;
+}
+
 export const db = {
-  get: (store, id) => tx(store, 'readonly', s => s.get(id)),
-  all: (store) => tx(store, 'readonly', s => s.getAll()),
-  put: (store, value) => tx(store, 'readwrite', s => s.put(value)),
+  get: (store, id) => tx(store, 'readonly', s => s.get(id)).then(unpack),
+  all: (store) => tx(store, 'readonly', s => s.getAll()).then(unpack),
+  put: async (store, value) => { const packed = await pack(value); return tx(store, 'readwrite', s => s.put(packed)); },
   del: (store, id) => tx(store, 'readwrite', s => s.delete(id)),
   clear: (store) => tx(store, 'readwrite', s => s.clear()),
   async setting(key, fallback) {

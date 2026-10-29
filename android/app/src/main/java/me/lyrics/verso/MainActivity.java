@@ -17,6 +17,8 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Base64;
+import android.view.View;
+import android.view.WindowInsets;
 import android.webkit.JavascriptInterface;
 import android.webkit.MimeTypeMap;
 import android.webkit.ValueCallback;
@@ -62,7 +64,23 @@ public class MainActivity extends Activity {
         getWindow().setStatusBarColor(Color.parseColor("#131a11"));
         getWindow().setNavigationBarColor(Color.parseColor("#131a11"));
         web = new WebView(this);
+        web.setBackgroundColor(Color.parseColor("#131a11"));
         setContentView(web);
+        getWindow().getDecorView().setBackgroundColor(Color.parseColor("#131a11"));
+        // Android 15 affiche les applications bord à bord : on garde le contenu entre la barre
+        // d'état, la barre de navigation et le clavier.
+        web.setOnApplyWindowInsetsListener((View v, WindowInsets insets) -> {
+            int l, t, r, b;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                android.graphics.Insets i = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout() | WindowInsets.Type.ime());
+                l = i.left; t = i.top; r = i.right; b = i.bottom;
+            } else {
+                l = insets.getSystemWindowInsetLeft(); t = insets.getSystemWindowInsetTop();
+                r = insets.getSystemWindowInsetRight(); b = insets.getSystemWindowInsetBottom();
+            }
+            v.setPadding(l, t, r, b);
+            return insets;
+        });
 
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
@@ -195,6 +213,25 @@ public class MainActivity extends Activity {
             } catch (Exception e) {
                 return "";
             }
+        }
+
+        /** Couleur des zones de la barre d'état et de navigation (thème clair ou sombre). */
+        @JavascriptInterface
+        public void setThemeColor(String hex) {
+            runOnUiThread(() -> {
+                try {
+                    int c = Color.parseColor(hex);
+                    web.setBackgroundColor(c);
+                    getWindow().getDecorView().setBackgroundColor(c);
+                    getWindow().setStatusBarColor(c);
+                    getWindow().setNavigationBarColor(c);
+                    boolean light = (Color.red(c) * 299 + Color.green(c) * 587 + Color.blue(c) * 114) / 1000 > 150;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        int f = android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS | android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS;
+                        getWindow().getInsetsController().setSystemBarsAppearance(light ? f : 0, f);
+                    }
+                } catch (Exception ignored) { }
+            });
         }
 
         @JavascriptInterface

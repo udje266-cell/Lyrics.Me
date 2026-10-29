@@ -148,6 +148,7 @@ const routes = [
 const darkMQ = matchMedia('(prefers-color-scheme: dark)');
 const isDark = () => document.documentElement.dataset.theme === 'dark' || (!document.documentElement.dataset.theme && darkMQ.matches);
 async function applyLogo() {
+  if (window.VersoAndroid && window.VersoAndroid.setThemeColor) window.VersoAndroid.setThemeColor(getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#131a11');
   const url = isDark() ? await lightLogoURL() : null;
   document.querySelectorAll('img.brand-logo').forEach(i => { i.src = url || 'icons/logo.png'; });
 }
