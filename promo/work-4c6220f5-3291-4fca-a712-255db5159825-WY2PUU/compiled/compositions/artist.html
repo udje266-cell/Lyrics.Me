@@ -1,0 +1,29 @@
+<template>
+  <style>
+    @font-face { font-family: "Space Grotesk"; font-weight: 700; src: url("assets/fonts/SpaceGrotesk-700-normal-latin.woff2") format("woff2"); }
+    @font-face { font-family: "Space Grotesk"; font-weight: 700; src: url("assets/fonts/SpaceGrotesk-700-normal-latin-ext.woff2") format("woff2"); unicode-range: U+0100-024F; }
+    #root { position: absolute; inset: 0; overflow: hidden; background: #131a11; font-family: "Space Grotesk", Inter, sans-serif; }
+    .phone { position: absolute; left: 190px; top: 250px; width: 700px; height: 900px; border-radius: 56px; overflow: hidden; border: 3px solid #364430; box-shadow: 0 40px 120px rgba(0,0,0,.55); background: #131a11; }
+    .phone img { position: absolute; left: 0; top: 0; width: 700px; height: auto; transform-origin: 0 0; }
+    .claim { position: absolute; left: 90px; right: 90px; top: 172px; text-align: center; color: #cce988; font-size: 46px; font-weight: 700; letter-spacing: -0.02em; }
+    .card { position: absolute; border-radius: 28px; box-shadow: 0 40px 120px rgba(0,0,0,.6); }
+    
+  </style>
+  <div id="root" data-composition-id="artist" data-width="1080" data-height="1920">
+    <div id="ar-claim" class="clip claim" data-start="0.00" data-duration="1.41"><span>Cherche un artiste</span></div><div id="ar-search" class="clip phone" data-start="0.00" data-duration="1.41" data-layout-allow-overflow><img id="ar-search-img" src="assets/screens/04-recherche.png" alt="" ></div><div id="ar-claim2" class="clip claim" data-start="1.41" data-duration="2.50"><span>Bio, albums, singles</span></div><div id="ar-claim3" class="clip claim" data-start="3.91" data-duration="3.21"><span>Importe sa discographie</span></div><div id="ar-page" class="clip phone" data-start="1.41" data-duration="5.71" data-layout-allow-overflow><img id="ar-page-img" src="assets/screens/05-artiste-full.png" alt="" ></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#ar-claim span", {y: -20, opacity: 0}, {y: 0, opacity: 1, duration: 0.3, ease: "power3.out"}, 0.05);
+    tl.fromTo("#ar-search", {y: 80, opacity: 0}, {y: 0, opacity: 1, duration: 0.4, ease: "power3.out"}, 0);
+    tl.fromTo("#ar-search-img", {scale: 1}, {scale: 1.5, duration: 0.6, ease: "power2.inOut"}, 0.6);
+    tl.fromTo("#ar-claim2 span", {y: -20, opacity: 0}, {y: 0, opacity: 1, duration: 0.3, ease: "power3.out"}, 1.46);
+    tl.fromTo("#ar-page", {scale: 0.9, opacity: 0}, {scale: 1, opacity: 1, duration: 0.4, ease: "power3.out"}, 1.41);
+    tl.fromTo("#ar-page-img", {y: 0}, {y: -300, duration: 0.60, ease: "power2.inOut"}, 1.46);
+    tl.to("#ar-page-img", {y: -980, duration: 0.65, ease: "power2.inOut"}, 2.15);
+    tl.to("#ar-page-img", {y: -1700, duration: 0.80, ease: "power2.inOut"}, 2.85);
+    tl.fromTo("#ar-claim3 span", {y: -20, opacity: 0}, {y: 0, opacity: 1, duration: 0.3, ease: "power3.out"}, 3.96);
+    tl.to("#ar-page-img", {y: 0, scale: 1.35, x: -60, duration: 0.7, ease: "power3.inOut"}, 3.91);
+    window.__timelines["artist"] = tl;
+  </script>
+</template>

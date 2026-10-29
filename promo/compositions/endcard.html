@@ -1,0 +1,24 @@
+<template>
+  <style>
+    @font-face { font-family: "Space Grotesk"; font-weight: 700; src: url("assets/fonts/SpaceGrotesk-700-normal-latin.woff2") format("woff2"); }
+    @font-face { font-family: "Space Grotesk"; font-weight: 700; src: url("assets/fonts/SpaceGrotesk-700-normal-latin-ext.woff2") format("woff2"); unicode-range: U+0100-024F; }
+    #root { position: absolute; inset: 0; overflow: hidden; background: #131a11; font-family: "Space Grotesk", Inter, sans-serif; }
+    .phone { position: absolute; left: 190px; top: 250px; width: 700px; height: 900px; border-radius: 56px; overflow: hidden; border: 3px solid #364430; box-shadow: 0 40px 120px rgba(0,0,0,.55); background: #131a11; }
+    .phone img { position: absolute; left: 0; top: 0; width: 700px; height: auto; transform-origin: 0 0; }
+    .claim { position: absolute; left: 90px; right: 90px; top: 172px; text-align: center; color: #cce988; font-size: 46px; font-weight: 700; letter-spacing: -0.02em; }
+    .card { position: absolute; border-radius: 28px; box-shadow: 0 40px 120px rgba(0,0,0,.6); }
+    
+  </style>
+  <div id="root" data-composition-id="endcard" data-width="1080" data-height="1920">
+    <div id="ec-bg" class="clip" data-start="0" data-duration="2.87" style="position:absolute;inset:0;background:#f5f7ef"></div>
+    <div id="ec-mark" class="clip" data-start="0" data-duration="2.87" style="position:absolute;left:190px;top:560px;width:700px;height:234px;overflow:hidden" data-layout-allow-overflow><img id="ec-logo" src="assets/logo.png" alt="Verso" style="width:700px;height:auto"></div>
+    <div id="ec-tag" class="clip" data-start="0.6" data-duration="2.27" style="position:absolute;left:90px;right:90px;top:860px;text-align:center;color:#161f14;font-size:56px;font-weight:700;letter-spacing:-0.02em;line-height:1.15"><span>Tes paroles préférées,<br>en cartes.</span></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#ec-logo", {clipPath: "inset(0 72% 0 0)", scale: 0.6, y: 40}, {clipPath: "inset(0 72% 0 0)", scale: 1, y: 0, duration: 0.4, ease: "back.out(1.6)"}, 0);
+    tl.to("#ec-logo", {clipPath: "inset(0 0% 0 0)", duration: 0.45, ease: "power3.inOut"}, 0.42);
+    tl.fromTo("#ec-tag span", {y: 30, opacity: 0}, {y: 0, opacity: 1, duration: 0.4, ease: "power3.out"}, 0.7);
+    window.__timelines["endcard"] = tl;
+  </script>
+</template>

@@ -1,0 +1,830 @@
+[
+  {
+    "text": "Ce",
+    "start": 0.12,
+    "end": 0.2,
+    "id": "w0"
+  },
+  {
+    "text": "son",
+    "start": 0.2,
+    "end": 0.5,
+    "id": "w1"
+  },
+  {
+    "text": "qui",
+    "start": 0.5,
+    "end": 0.71,
+    "id": "w2"
+  },
+  {
+    "text": "te",
+    "start": 0.81,
+    "end": 1,
+    "id": "w3"
+  },
+  {
+    "text": "fait",
+    "start": 1,
+    "end": 1.39,
+    "id": "w4"
+  },
+  {
+    "text": "vibrer",
+    "start": 1.39,
+    "end": 1.93,
+    "id": "w5"
+  },
+  {
+    "text": "est",
+    "start": 2.12,
+    "end": 2.21,
+    "id": "w6"
+  },
+  {
+    "text": "cette",
+    "start": 2.21,
+    "end": 2.56,
+    "id": "w7"
+  },
+  {
+    "text": "phrase",
+    "start": 2.56,
+    "end": 3,
+    "id": "w8"
+  },
+  {
+    "text": "que",
+    "start": 3,
+    "end": 3.19,
+    "id": "w9"
+  },
+  {
+    "text": "tu",
+    "start": 3.19,
+    "end": 3.28,
+    "id": "w10"
+  },
+  {
+    "text": "te",
+    "start": 3.32,
+    "end": 3.45,
+    "id": "w11"
+  },
+  {
+    "text": "repasses",
+    "start": 3.45,
+    "end": 3.75,
+    "id": "w12"
+  },
+  {
+    "text": "en",
+    "start": 3.75,
+    "end": 4.14,
+    "id": "w13"
+  },
+  {
+    "text": "boucle.",
+    "start": 4.14,
+    "end": 4.5,
+    "id": "w14"
+  },
+  {
+    "text": "Avec",
+    "start": 4.63,
+    "end": 4.86,
+    "id": "w15"
+  },
+  {
+    "text": "Verso,",
+    "start": 4.86,
+    "end": 5.5,
+    "id": "w16"
+  },
+  {
+    "text": "elle",
+    "start": 5.5,
+    "end": 5.71,
+    "id": "w17"
+  },
+  {
+    "text": "devient",
+    "start": 5.71,
+    "end": 6.07,
+    "id": "w18"
+  },
+  {
+    "text": "une",
+    "start": 6.07,
+    "end": 6.14,
+    "id": "w19"
+  },
+  {
+    "text": "carte.",
+    "start": 6.14,
+    "end": 6.7,
+    "id": "w20"
+  },
+  {
+    "text": "Tu",
+    "start": 6.82,
+    "end": 6.83,
+    "id": "w21"
+  },
+  {
+    "text": "écoutes",
+    "start": 6.83,
+    "end": 7.29,
+    "id": "w22"
+  },
+  {
+    "text": "sur",
+    "start": 7.29,
+    "end": 7.41,
+    "id": "w23"
+  },
+  {
+    "text": "Spotify?",
+    "start": 7.51,
+    "end": 8.2,
+    "id": "w24"
+  },
+  {
+    "text": "Verso",
+    "start": 8.32,
+    "end": 8.52,
+    "id": "w25"
+  },
+  {
+    "text": "reconnaît",
+    "start": 8.52,
+    "end": 9.11,
+    "id": "w26"
+  },
+  {
+    "text": "le",
+    "start": 9.11,
+    "end": 9.24,
+    "id": "w27"
+  },
+  {
+    "text": "titre.",
+    "start": 9.24,
+    "end": 9.8,
+    "id": "w28"
+  },
+  {
+    "text": "Un",
+    "start": 9.92,
+    "end": 10.02,
+    "id": "w29"
+  },
+  {
+    "text": "geste",
+    "start": 10.02,
+    "end": 10.53,
+    "id": "w30"
+  },
+  {
+    "text": "et",
+    "start": 10.61,
+    "end": 10.71,
+    "id": "w31"
+  },
+  {
+    "text": "des",
+    "start": 10.71,
+    "end": 10.88,
+    "id": "w32"
+  },
+  {
+    "text": "paroles",
+    "start": 10.88,
+    "end": 11.27,
+    "id": "w33"
+  },
+  {
+    "text": "sont",
+    "start": 11.27,
+    "end": 11.4,
+    "id": "w34"
+  },
+  {
+    "text": "là.",
+    "start": 11.4,
+    "end": 11.75,
+    "id": "w35"
+  },
+  {
+    "text": "Tu",
+    "start": 11.91,
+    "end": 11.92,
+    "id": "w36"
+  },
+  {
+    "text": "cherches",
+    "start": 11.93,
+    "end": 12.42,
+    "id": "w37"
+  },
+  {
+    "text": "un",
+    "start": 12.42,
+    "end": 12.51,
+    "id": "w38"
+  },
+  {
+    "text": "artiste?",
+    "start": 12.53,
+    "end": 13.2,
+    "id": "w39"
+  },
+  {
+    "text": "Sa",
+    "start": 13.32,
+    "end": 13.36,
+    "id": "w40"
+  },
+  {
+    "text": "bio,",
+    "start": 13.37,
+    "end": 13.8,
+    "id": "w41"
+  },
+  {
+    "text": "ses",
+    "start": 13.8,
+    "end": 14.06,
+    "id": "w42"
+  },
+  {
+    "text": "albums,",
+    "start": 14.06,
+    "end": 14.76,
+    "id": "w43"
+  },
+  {
+    "text": "ses",
+    "start": 14.76,
+    "end": 14.86,
+    "id": "w44"
+  },
+  {
+    "text": "singles.",
+    "start": 15.33,
+    "end": 15.7,
+    "id": "w45"
+  },
+  {
+    "text": "Tu",
+    "start": 15.82,
+    "end": 15.83,
+    "id": "w46"
+  },
+  {
+    "text": "importes",
+    "start": 15.83,
+    "end": 16.37,
+    "id": "w47"
+  },
+  {
+    "text": "toute",
+    "start": 16.37,
+    "end": 16.71,
+    "id": "w48"
+  },
+  {
+    "text": "sa",
+    "start": 16.71,
+    "end": 16.83,
+    "id": "w49"
+  },
+  {
+    "text": "discographie,",
+    "start": 16.87,
+    "end": 17.7,
+    "id": "w50"
+  },
+  {
+    "text": "avec",
+    "start": 17.82,
+    "end": 17.95,
+    "id": "w51"
+  },
+  {
+    "text": "les",
+    "start": 17.95,
+    "end": 18.13,
+    "id": "w52"
+  },
+  {
+    "text": "pochettes.",
+    "start": 18.13,
+    "end": 18.9,
+    "id": "w53"
+  },
+  {
+    "text": "Maintenant,",
+    "start": 19.03,
+    "end": 19.87,
+    "id": "w54"
+  },
+  {
+    "text": "la",
+    "start": 19.87,
+    "end": 20.02,
+    "id": "w55"
+  },
+  {
+    "text": "magie.",
+    "start": 20.07,
+    "end": 20.54,
+    "id": "w56"
+  },
+  {
+    "text": "Appuie",
+    "start": 20.82,
+    "end": 21.2,
+    "id": "w57"
+  },
+  {
+    "text": "sur",
+    "start": 21.2,
+    "end": 21.41,
+    "id": "w58"
+  },
+  {
+    "text": "un",
+    "start": 21.51,
+    "end": 21.62,
+    "id": "w59"
+  },
+  {
+    "text": "mot,",
+    "start": 21.62,
+    "end": 21.9,
+    "id": "w60"
+  },
+  {
+    "text": "étire",
+    "start": 22.02,
+    "end": 22.3,
+    "id": "w61"
+  },
+  {
+    "text": "la",
+    "start": 22.3,
+    "end": 22.46,
+    "id": "w62"
+  },
+  {
+    "text": "sélection,",
+    "start": 22.46,
+    "end": 23.2,
+    "id": "w63"
+  },
+  {
+    "text": "et",
+    "start": 23.32,
+    "end": 23.36,
+    "id": "w64"
+  },
+  {
+    "text": "crée",
+    "start": 23.36,
+    "end": 23.68,
+    "id": "w65"
+  },
+  {
+    "text": "ta",
+    "start": 23.68,
+    "end": 23.82,
+    "id": "w66"
+  },
+  {
+    "text": "carte.",
+    "start": 23.86,
+    "end": 24.48,
+    "id": "w67"
+  },
+  {
+    "text": "Cette",
+    "start": 24.63,
+    "end": 25,
+    "id": "w68"
+  },
+  {
+    "text": "style,",
+    "start": 25,
+    "end": 25.5,
+    "id": "w69"
+  },
+  {
+    "text": "bandeau,",
+    "start": 25.63,
+    "end": 26.17,
+    "id": "w70"
+  },
+  {
+    "text": "vinyle,",
+    "start": 26.32,
+    "end": 26.87,
+    "id": "w71"
+  },
+  {
+    "text": "éditoriale,",
+    "start": 26.97,
+    "end": 27.8,
+    "id": "w72"
+  },
+  {
+    "text": "typographique,",
+    "start": 27.92,
+    "end": 28.8,
+    "id": "w73"
+  },
+  {
+    "text": "la",
+    "start": 28.92,
+    "end": 28.93,
+    "id": "w74"
+  },
+  {
+    "text": "pochette",
+    "start": 28.93,
+    "end": 29.42,
+    "id": "w75"
+  },
+  {
+    "text": "de",
+    "start": 29.45,
+    "end": 29.52,
+    "id": "w76"
+  },
+  {
+    "text": "l'album,",
+    "start": 29.61,
+    "end": 30.2,
+    "id": "w77"
+  },
+  {
+    "text": "une",
+    "start": 30.32,
+    "end": 30.36,
+    "id": "w78"
+  },
+  {
+    "text": "photo",
+    "start": 30.37,
+    "end": 30.64,
+    "id": "w79"
+  },
+  {
+    "text": "de",
+    "start": 30.65,
+    "end": 30.76,
+    "id": "w80"
+  },
+  {
+    "text": "l'artiste,",
+    "start": 30.76,
+    "end": 31.3,
+    "id": "w81"
+  },
+  {
+    "text": "ou",
+    "start": 31.42,
+    "end": 31.44,
+    "id": "w82"
+  },
+  {
+    "text": "ta",
+    "start": 31.44,
+    "end": 31.58,
+    "id": "w83"
+  },
+  {
+    "text": "propre",
+    "start": 31.58,
+    "end": 31.97,
+    "id": "w84"
+  },
+  {
+    "text": "photo.",
+    "start": 32,
+    "end": 32.58,
+    "id": "w85"
+  },
+  {
+    "text": "Choisis",
+    "start": 32.71,
+    "end": 33.03,
+    "id": "w86"
+  },
+  {
+    "text": "ta",
+    "start": 33.03,
+    "end": 33.15,
+    "id": "w87"
+  },
+  {
+    "text": "police,",
+    "start": 33.15,
+    "end": 33.7,
+    "id": "w88"
+  },
+  {
+    "text": "tes",
+    "start": 33.82,
+    "end": 33.91,
+    "id": "w89"
+  },
+  {
+    "text": "couleurs,",
+    "start": 33.91,
+    "end": 34.5,
+    "id": "w90"
+  },
+  {
+    "text": "mets",
+    "start": 34.63,
+    "end": 34.81,
+    "id": "w91"
+  },
+  {
+    "text": "tes",
+    "start": 34.81,
+    "end": 35.04,
+    "id": "w92"
+  },
+  {
+    "text": "mots",
+    "start": 35.04,
+    "end": 35.35,
+    "id": "w93"
+  },
+  {
+    "text": "en",
+    "start": 35.35,
+    "end": 35.5,
+    "id": "w94"
+  },
+  {
+    "text": "valeur.",
+    "start": 35.5,
+    "end": 36,
+    "id": "w95"
+  },
+  {
+    "text": "Carré,",
+    "start": 36.12,
+    "end": 36.6,
+    "id": "w96"
+  },
+  {
+    "text": "portrait,",
+    "start": 36.6,
+    "end": 37.28,
+    "id": "w97"
+  },
+  {
+    "text": "story,",
+    "start": 37.43,
+    "end": 37.97,
+    "id": "w98"
+  },
+  {
+    "text": "un",
+    "start": 38.12,
+    "end": 38.22,
+    "id": "w99"
+  },
+  {
+    "text": "touché,",
+    "start": 38.22,
+    "end": 38.9,
+    "id": "w100"
+  },
+  {
+    "text": "et",
+    "start": 38.99,
+    "end": 39,
+    "id": "w101"
+  },
+  {
+    "text": "c'est",
+    "start": 39.02,
+    "end": 39.23,
+    "id": "w102"
+  },
+  {
+    "text": "sur",
+    "start": 39.23,
+    "end": 39.38,
+    "id": "w103"
+  },
+  {
+    "text": "WhatsApp",
+    "start": 39.38,
+    "end": 39.8,
+    "id": "w104"
+  },
+  {
+    "text": "ou",
+    "start": 39.8,
+    "end": 39.94,
+    "id": "w105"
+  },
+  {
+    "text": "Instagram.",
+    "start": 39.94,
+    "end": 40.69,
+    "id": "w106"
+  },
+  {
+    "text": "Ta",
+    "start": 40.91,
+    "end": 40.92,
+    "id": "w107"
+  },
+  {
+    "text": "bibliothèque,",
+    "start": 40.93,
+    "end": 41.8,
+    "id": "w108"
+  },
+  {
+    "text": "tes",
+    "start": 41.92,
+    "end": 41.96,
+    "id": "w109"
+  },
+  {
+    "text": "passages",
+    "start": 41.97,
+    "end": 42.42,
+    "id": "w110"
+  },
+  {
+    "text": "préférés,",
+    "start": 42.42,
+    "end": 43,
+    "id": "w111"
+  },
+  {
+    "text": "ton",
+    "start": 43.13,
+    "end": 43.3,
+    "id": "w112"
+  },
+  {
+    "text": "profil,",
+    "start": 43.3,
+    "end": 43.9,
+    "id": "w113"
+  },
+  {
+    "text": "tout",
+    "start": 44.02,
+    "end": 44.16,
+    "id": "w114"
+  },
+  {
+    "text": "reste",
+    "start": 44.16,
+    "end": 44.49,
+    "id": "w115"
+  },
+  {
+    "text": "sur",
+    "start": 44.49,
+    "end": 44.61,
+    "id": "w116"
+  },
+  {
+    "text": "ton",
+    "start": 44.71,
+    "end": 44.88,
+    "id": "w117"
+  },
+  {
+    "text": "téléphone,",
+    "start": 44.89,
+    "end": 45.5,
+    "id": "w118"
+  },
+  {
+    "text": "même",
+    "start": 45.62,
+    "end": 45.76,
+    "id": "w119"
+  },
+  {
+    "text": "sans",
+    "start": 45.76,
+    "end": 46.02,
+    "id": "w120"
+  },
+  {
+    "text": "connexion.",
+    "start": 46.02,
+    "end": 46.78,
+    "id": "w121"
+  },
+  {
+    "text": "Et",
+    "start": 46.91,
+    "end": 46.92,
+    "id": "w122"
+  },
+  {
+    "text": "chaque",
+    "start": 46.93,
+    "end": 47.3,
+    "id": "w123"
+  },
+  {
+    "text": "jour,",
+    "start": 47.3,
+    "end": 47.7,
+    "id": "w124"
+  },
+  {
+    "text": "l'actu",
+    "start": 47.78,
+    "end": 48.19,
+    "id": "w125"
+  },
+  {
+    "text": "musical",
+    "start": 48.19,
+    "end": 48.8,
+    "id": "w126"
+  },
+  {
+    "text": "est",
+    "start": 48.8,
+    "end": 48.95,
+    "id": "w127"
+  },
+  {
+    "text": "les",
+    "start": 48.95,
+    "end": 49.1,
+    "id": "w128"
+  },
+  {
+    "text": "tendances",
+    "start": 49.1,
+    "end": 49.38,
+    "id": "w129"
+  },
+  {
+    "text": "du",
+    "start": 49.38,
+    "end": 49.64,
+    "id": "w130"
+  },
+  {
+    "text": "moment.",
+    "start": 49.83,
+    "end": 50.07,
+    "id": "w131"
+  },
+  {
+    "text": "Verso,",
+    "start": 50.23,
+    "end": 50.9,
+    "id": "w132"
+  },
+  {
+    "text": "tes",
+    "start": 51.02,
+    "end": 51.08,
+    "id": "w133"
+  },
+  {
+    "text": "paroles",
+    "start": 51.08,
+    "end": 51.51,
+    "id": "w134"
+  },
+  {
+    "text": "préférées",
+    "start": 51.51,
+    "end": 52.1,
+    "id": "w135"
+  },
+  {
+    "text": "en",
+    "start": 52.1,
+    "end": 52.26,
+    "id": "w136"
+  },
+  {
+    "text": "carte.",
+    "start": 52.26,
+    "end": 52.83,
+    "id": "w137"
+  }
+]
