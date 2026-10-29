@@ -98,10 +98,22 @@ function fontString(style, size, bold) {
 }
 
 // Logo de l'application (fichier d'origine, non modifié), affiché dans le bandeau.
-let brandImg = null, brandLoading = null;
+let brandImg = null, brandLight = null, brandLoading = null;
+// Variante pour fond sombre : seul le mot « verso » (à droite du symbole) passe en blanc.
+function makeLightBrand(img) {
+  const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+  const x = c.getContext('2d'); x.drawImage(img, 0, 0);
+  const d = x.getImageData(0, 0, c.width, c.height), px = d.data, start = Math.round(c.width * 0.27);
+  for (let y = 0; y < c.height; y++) for (let i = start; i < c.width; i++) {
+    const o = (y * c.width + i) * 4;
+    if (px[o + 3] && px[o] + px[o + 1] + px[o + 2] < 300) { px[o] = px[o + 1] = px[o + 2] = 255; }
+  }
+  x.putImageData(d, 0, 0);
+  return c;
+}
 export function loadBrand() {
   if (brandImg || brandLoading) return brandLoading || Promise.resolve(brandImg);
-  brandLoading = new Promise(res => { const i = new Image(); i.onload = () => { brandImg = i; res(i); }; i.onerror = () => res(null); i.src = new URL('../icons/logo.png', import.meta.url).href; });
+  brandLoading = new Promise(res => { const i = new Image(); i.onload = () => { brandImg = i; try { brandLight = makeLightBrand(i); } catch { brandLight = i; } res(i); }; i.onerror = () => res(null); i.src = new URL('../icons/logo.png', import.meta.url).href; });
   return brandLoading;
 }
 
@@ -508,9 +520,7 @@ export function renderCard(canvas, card, imgs = {}, opts = {}) {
       const lx = W - m - lw, ly = cy - lh / 2;
       const n = parseInt((bandColor || '#000').slice(1, 7), 16);
       const dark = 0.299 * (n >> 16) + 0.587 * (n >> 8 & 255) + 0.114 * (n & 255) < 150;
-      // Sur un bandeau sombre, le logo (texte foncé) est posé sur une pastille claire, sans être modifié.
-      if (dark) { ctx.fillStyle = '#ffffff'; roundRect(ctx, lx - lh * 0.12, ly - lh * 0.08, lw + lh * 0.24, lh * 1.16, lh * 0.3); ctx.fill(); }
-      ctx.drawImage(brandImg, lx, ly, lw, lh);
+      ctx.drawImage(dark ? brandLight || brandImg : brandImg, lx, ly, lw, lh);
     } else if (sigH) {
       ctx.fillStyle = ink;
       ctx.font = `500 ${ms * 1.35}px Caveat, cursive`;
