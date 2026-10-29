@@ -118,7 +118,7 @@ async function renderHome() {
   const passages = (await db.all('passages')).sort((a, b) => b.createdAt - a.createdAt).slice(0, 4);
   view.innerHTML = `
     <div class="hero">
-      <div class="row" style="gap:12px;margin-bottom:6px"><img class="brand-mark" src="icons/icon-192.png" alt=""><h1 style="margin:0">verso</h1></div>
+      <img class="hero-logo" src="icons/logo.png" alt="Verso">
       <p class="muted" style="margin:0">Vos paroles préférées, en cartes. ${all.length} morceau${all.length > 1 ? 'x' : ''} · ${cards.filter(c => !c.draft).length} création${cards.filter(c => !c.draft).length > 1 ? 's' : ''}</p>
       <div class="quick">
         <a href="#/ajouter/manuel"><b>＋</b>Coller des paroles</a>

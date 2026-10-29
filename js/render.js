@@ -22,6 +22,7 @@ export const FONTS = [
 export const fontById = id => FONTS.find(f => f.id === id) || FONTS[0];
 
 export const TEMPLATES = {
+  bandeau: { label: 'Bandeau' },
   minimal: { label: 'Minimaliste' },
   editorial: { label: 'Éditorial' },
   pochette: { label: 'Pochette' },
@@ -30,42 +31,55 @@ export const TEMPLATES = {
   typo: { label: 'Typographique' },
 };
 
-const baseMeta = { showTitle: true, showArtist: true, showCover: false, showSignature: false, signature: '', pos: 'bottom', align: 'left', size: 30, sigPos: 'bottom-right' };
-const baseBg = { kind: 'solid', color: '#141218', color2: '#3b2d4f', angle: 135, texture: 'none', textureAlpha: 0.25, imgZoom: 1, imgX: 0, imgY: 0, blur: 0, veil: 0 };
+const baseMeta = { showTitle: true, showArtist: true, showCover: true, showSignature: false, signature: '', pos: 'bottom', align: 'left', size: 30, sigPos: 'bottom-right', color: '' };
+const baseBg = { kind: 'solid', color: '#141218', color2: '#3b2d4f', angle: 135, texture: 'none', textureAlpha: 0.25, imgZoom: 1, imgX: 0, imgY: 0, blur: 0, veil: 0, veilMode: 'flat' };
 
 // Réglages par défaut de chaque modèle. Appliquer un modèle ne touche ni à l'extrait,
 // ni au titre, ni à l'artiste, ni aux images de la carte.
 export function templatePreset(name) {
   const p = {
-    font: 'inter', weight: 700, italic: false, size: 58, color: '#f4efe6', align: 'left', lineHeight: 1.3,
-    margin: 0.09, posY: 0.5, uppercase: false, accent: '#f2b84b',
-    highlights: [], hlMode: 'color', dimOthers: false,
-    bg: { ...baseBg }, meta: { ...baseMeta },
+    font: 'grotesk', weight: 700, italic: false, size: 76, color: '#f4f1ea', align: 'left', lineHeight: 1.22,
+    margin: 0.085, posY: 0.5, uppercase: false, accent: '#cce988', autoFit: false,
+    highlights: [], hlMode: 'color', dimOthers: false, lineBg: '', shadow: false,
+    bg: { ...baseBg, color: '#161f14' }, meta: { ...baseMeta },
   };
   switch (name) {
+    case 'bandeau':
+      // Image plein cadre, lignes sur bandes blanches, bandeau d'informations en bas.
+      Object.assign(p, { font: 'inter', weight: 400, size: 54, color: '#0b0b0b', lineBg: '#ffffff', lineHeight: 1.6, posY: 1, margin: 0.055, accent: '#0b0b0b', hlMode: 'bold' });
+      p.bg = { ...baseBg, kind: 'cover', color: '#2b3a24', veil: 0 };
+      p.meta = { ...baseMeta, showCover: false, band: '#000000', color: '#ffffff', size: 30, showSignature: true };
+      break;
+    case 'minimal':
+      // Bandeaux derrière chaque ligne : la carte de paroles classique, sobre.
+      Object.assign(p, { font: 'inter', weight: 700, size: 60, color: '#111111', lineBg: '#ffffff', lineHeight: 1.5, posY: 0.5, accent: '#111111', hlMode: 'mark' });
+      p.bg = { ...baseBg, kind: 'gradient', color: '#2b3a24', color2: '#121a10', angle: 160, texture: 'grain', textureAlpha: 0.12 };
+      p.meta = { ...baseMeta, color: '#ffffff' };
+      break;
     case 'editorial':
-      Object.assign(p, { font: 'playfair', weight: 400, italic: true, size: 64, color: '#1d1a17', lineHeight: 1.25, accent: '#b3401f', posY: 0.42 });
-      p.bg = { ...baseBg, color: '#f3ede2', texture: 'papier', textureAlpha: 0.35 };
-      p.meta = { ...baseMeta, align: 'left' };
+      Object.assign(p, { font: 'playfair', weight: 400, italic: false, size: 64, color: '#1c1a16', lineHeight: 1.18, accent: '#b3401f', posY: 0.55, margin: 0.1 });
+      p.bg = { ...baseBg, color: '#efe9dc', texture: 'grain', textureAlpha: 0.1 };
+      p.meta = { ...baseMeta, showCover: false, size: 26 };
       break;
     case 'pochette':
-      Object.assign(p, { font: 'grotesk', weight: 700, size: 52, align: 'center', color: '#ffffff', posY: 0.35 });
-      p.bg = { ...baseBg, kind: 'cover', blur: 40, veil: 0.55 };
-      p.meta = { ...baseMeta, align: 'center' };
+      Object.assign(p, { font: 'inter', weight: 700, size: 50, align: 'center', color: '#0e0e0e', lineBg: '#ffffff', lineHeight: 1.48, posY: 0.5, accent: '#0e0e0e', hlMode: 'mark' });
+      p.bg = { ...baseBg, kind: 'cover', blur: 46, veil: 0.45, imgZoom: 1.15 };
+      p.meta = { ...baseMeta, showCover: false, align: 'center', color: '#ffffff' };
       break;
     case 'photo':
-      Object.assign(p, { font: 'lora', weight: 700, size: 56, color: '#ffffff', posY: 1 });
-      p.bg = { ...baseBg, kind: 'photo', veil: 0.4 };
+      Object.assign(p, { font: 'lora', weight: 700, size: 58, color: '#ffffff', posY: 1, lineHeight: 1.2, shadow: true, accent: '#cce988' });
+      p.bg = { ...baseBg, kind: 'photo', veil: 0.75, veilMode: 'gradient' };
       p.meta = { ...baseMeta, pos: 'top' };
       break;
     case 'vinyle':
-      Object.assign(p, { font: 'dmserif', weight: 400, size: 56, align: 'center', color: '#f6e9d7', accent: '#e86a3f', posY: 0.4 });
-      p.bg = { ...baseBg, kind: 'gradient', color: '#2a1610', color2: '#0d0b0a', angle: 180, texture: 'grain', textureAlpha: 0.2 };
-      p.meta = { ...baseMeta, align: 'center' };
+      Object.assign(p, { font: 'dmserif', weight: 400, size: 56, align: 'left', color: '#f6e9d7', accent: '#ff8a4c', posY: 1, lineHeight: 1.15 });
+      p.bg = { ...baseBg, kind: 'gradient', color: '#3a1d12', color2: '#0f0b09', angle: 200, texture: 'grain', textureAlpha: 0.16 };
+      p.meta = { ...baseMeta, showCover: false };
       break;
     case 'typo':
-      Object.assign(p, { font: 'bebas', weight: 400, size: 112, uppercase: true, lineHeight: 0.98, color: '#f1f1ee', accent: '#ff5a36', dimOthers: true, posY: 0.45 });
-      p.bg = { ...baseBg, color: '#101010', texture: 'grain', textureAlpha: 0.18 };
+      Object.assign(p, { font: 'bebas', weight: 400, size: 150, uppercase: true, lineHeight: 0.92, color: '#f1f1ee', accent: '#cce988', dimOthers: true, posY: 0.5, autoFit: true, margin: 0.07 });
+      p.bg = { ...baseBg, color: '#0f130e', texture: 'grain', textureAlpha: 0.14 };
+      p.meta = { ...baseMeta, showCover: false, size: 28 };
       break;
   }
   return p;
@@ -181,7 +195,13 @@ function drawBackground(ctx, card, imgs, W, H, k) {
     ctx.restore();
   }
   if (bg.veil) {
-    ctx.fillStyle = bg.veil > 0 ? `rgba(0,0,0,${bg.veil})` : `rgba(255,255,255,${-bg.veil})`;
+    const c = bg.veil > 0 ? '0,0,0' : '255,255,255', a = Math.abs(bg.veil);
+    if (bg.veilMode === 'gradient') {
+      // Voile progressif : l'image reste visible en haut, le texte reste lisible en bas.
+      const g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, `rgba(${c},${a * 0.35})`); g.addColorStop(0.4, `rgba(${c},${a * 0.1})`); g.addColorStop(1, `rgba(${c},${Math.min(1, a * 1.15)})`);
+      ctx.fillStyle = g;
+    } else ctx.fillStyle = `rgba(${c},${a})`;
     ctx.fillRect(0, 0, W, H);
   }
   if (bg.texture && bg.texture !== 'none') {
@@ -196,6 +216,8 @@ function drawBackground(ctx, card, imgs, W, H, k) {
     ctx.restore();
   }
 }
+
+function setSpacing(ctx, px) { if ('letterSpacing' in ctx) ctx.letterSpacing = px + 'px'; }
 
 function roundRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
@@ -257,75 +279,101 @@ export function renderCard(canvas, card, imgs = {}, opts = {}) {
   const m = st.margin * W;
   let top = m, bottom = H - m;
   const tpl = card.template;
+  const metaColor = meta.color || st.color;
 
   // Éléments propres au modèle (pochette, disque).
   if (tpl === 'pochette') {
-    const s = Math.min(W * 0.5, H * 0.36);
-    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 40 * kr; ctx.shadowOffsetY = 16 * kr;
-    drawCoverSquare(ctx, imgs.cover, (W - s) / 2, top, s, 18 * k, st.accent);
+    const s = Math.min(W * 0.56, H * 0.4);
+    const x = (W - s) / 2;
+    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.55)'; ctx.shadowBlur = 60 * kr; ctx.shadowOffsetY = 24 * kr;
+    ctx.fillStyle = '#000'; roundRect(ctx, x, top, s, s, 10); ctx.fill();
     ctx.restore();
-    drawCoverSquare(ctx, imgs.cover, (W - s) / 2, top, s, 18 * k, st.accent);
-    top += s + 50 * k;
+    drawCoverSquare(ctx, imgs.cover, x, top, s, 10, st.accent);
+    top += s + 56;
   } else if (tpl === 'vinyle') {
-    const R = Math.min(W * 0.34, H * 0.2);
-    drawVinyl(ctx, W / 2, top + R, R, imgs.cover, st.accent);
-    top += R * 2 + 50 * k;
+    // Disque à moitié hors cadre, en haut à droite.
+    const R = Math.min(W * 0.4, H * 0.24);
+    drawVinyl(ctx, W - R * 0.62, m + R * 0.78, R, imgs.cover, st.accent);
+    top = m + R * 1.78 + 40;
   }
 
   // Bloc d'informations (titre, artiste, pochette miniature).
-  const ms = meta.size * k;
+  const ms = meta.size;
   const metaLines = [];
-  if (meta.showTitle && card.title) metaLines.push({ t: card.title, bold: true });
-  if (meta.showArtist && card.artist) metaLines.push({ t: card.artist, bold: false });
-  const sigH = meta.showSignature && meta.signature ? ms * 1.6 : 0;
-  if (sigH) { if (meta.sigPos.startsWith('top')) top += sigH + 24 * k; else bottom -= sigH + 24 * k; }
-  const thumb = meta.showCover ? ms * 2.6 : 0;
-  const metaH = Math.max(metaLines.length * ms * 1.35, thumb);
-  const metaGap = 46 * k;
+  if (meta.showTitle && card.title) metaLines.push({ t: card.title, kind: 'title' });
+  if (meta.showArtist && card.artist) metaLines.push({ t: card.artist, kind: 'artist' });
+  const metaFont = l => l.kind === 'title' ? `700 ${ms * 1.12}px Inter, system-ui` : `500 ${ms * 0.82}px Inter, system-ui`;
+  const lineGap = ms * 1.45;
+  const thumb = meta.showCover && imgs.cover ? ms * 2.9 : 0;
+  const metaH = Math.max(metaLines.length * lineGap, thumb);
+  const metaGap = 56;
   let metaY = null;
-  if (metaH > 0) {
+  const sigH = meta.showSignature && meta.signature ? ms * 1.6 : 0;
+  if (sigH && !meta.band) { if (meta.sigPos.startsWith('top')) top += sigH + 24; else bottom -= sigH + 24; }
+  const band = meta.band && (meta.showTitle || meta.showArtist || (meta.showSignature && meta.signature));
+  const bandH = band ? Math.max(150, ms * 5) : 0;
+  if (band) bottom = H - bandH - 30;
+  else if (metaH > 0) {
     if (meta.pos === 'top') { metaY = top; top += metaH + metaGap; }
     else { metaY = bottom - metaH; bottom -= metaH + metaGap; }
   }
+
   // Guillemet éditorial.
   if (tpl === 'editorial') {
     ctx.fillStyle = st.accent;
-    ctx.font = `400 ${200 * k}px "DM Serif Display", Georgia, serif`;
+    ctx.font = `400 ${340}px "Playfair Display", Georgia, serif`;
     ctx.textAlign = st.align === 'center' ? 'center' : st.align === 'right' ? 'right' : 'left';
-    const qx = st.align === 'center' ? W / 2 : st.align === 'right' ? W - m : m - 8 * k;
-    ctx.fillText('“', qx, top + 150 * k);
-    top += 120 * k;
+    const qx = st.align === 'center' ? W / 2 : st.align === 'right' ? W - m : m - 14;
+    ctx.fillText('“', qx, top + 250);
+    top += 170;
   }
 
   // Texte principal.
-  const maxW = W - 2 * m;
+  const padX = st.lineBg ? st.size * 0.32 : 0;
+  const maxW = W - 2 * m - 2 * padX;
   const regionH = Math.max(0, bottom - top);
   const fits = sz => {
-    const L = layoutText(ctx, card, sz * k, maxW);
-    return { L, h: L.lines.length * sz * k * st.lineHeight, ok: !L.tooWide && L.lines.length * sz * k * st.lineHeight <= regionH };
+    const L = layoutText(ctx, card, sz, maxW);
+    const h = L.lines.length * sz * st.lineHeight;
+    return { L, h, ok: !L.tooWide && h <= regionH };
   };
-  const cur = fits(st.size);
-  let fitSize = st.size;
-  if (!cur.ok) { fitSize = Math.floor(st.size); while (fitSize > 12 && !fits(fitSize).ok) fitSize -= 2; }
-  const size = st.size * k, lh = size * st.lineHeight;
+  let size = st.size;
+  if (st.autoFit) {
+    // Le texte remplit la carte : plus grande taille qui tient (dans la limite choisie).
+    while (size > 24 && !fits(size).ok) size -= 2;
+  }
+  const cur = fits(size);
+  let fitSize = size;
+  if (!cur.ok) { fitSize = Math.floor(size); while (fitSize > 12 && !fits(fitSize).ok) fitSize -= 2; }
+  const lh = size * st.lineHeight;
   const { L, h } = cur;
   let y = top + Math.max(0, regionH - h) * st.posY;
   const hlColor = st.accent;
+  const hasHl = (st.highlights || []).length > 0;
   for (const line of L.lines) {
     y += lh;
-    const baseY = y - (lh - size) / 2 - size * 0.18;
-    let x = st.align === 'center' ? (W - line.width) / 2 : st.align === 'right' ? W - m - line.width : m;
+    const baseY = y - (lh - size) / 2 - size * 0.2;
+    let x = st.align === 'center' ? (W - line.width) / 2 : st.align === 'right' ? W - m - padX - line.width : m + padX;
+    if (st.lineBg && line.words.length) {
+      ctx.fillStyle = st.lineBg;
+      ctx.fillRect(x - padX, baseY - size * 0.86, line.width + padX * 2, size * 1.2);
+    }
     for (const w of line.words) {
       const bold = w.hl && st.hlMode === 'bold';
       ctx.font = fontString(st, size, bold);
       if (w.hl && st.hlMode === 'mark') {
-        ctx.fillStyle = hlColor;
-        ctx.fillRect(x - size * 0.08, baseY - size * 0.82, w.w + size * 0.16, size * 1.02);
+        ctx.fillStyle = st.lineBg ? st.color : hlColor;
+        ctx.fillRect(x - size * 0.1, baseY - size * 0.86, w.w + size * 0.2, size * 1.2);
       }
       ctx.textAlign = 'left';
-      ctx.globalAlpha = st.dimOthers && !w.hl && (st.highlights || []).length ? 0.42 : 1;
-      ctx.fillStyle = w.hl && st.hlMode === 'color' ? hlColor : st.color;
+      ctx.globalAlpha = st.dimOthers && !w.hl && hasHl ? 0.5 : 1;
+      let col = st.color;
+      if (w.hl && st.hlMode === 'color') col = hlColor;
+      if (w.hl && st.hlMode === 'mark') col = st.lineBg || st.bg.color;
+      ctx.fillStyle = col;
+      if (st.shadow) { ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = size * 0.25 * kr; ctx.shadowOffsetY = size * 0.04 * kr; }
       ctx.fillText(w.t, x, baseY);
+      ctx.shadowColor = 'transparent';
       ctx.globalAlpha = 1;
       x += w.w + L.space;
     }
@@ -335,27 +383,55 @@ export function renderCard(canvas, card, imgs = {}, opts = {}) {
   if (metaY !== null) {
     if (tpl === 'editorial') {
       ctx.fillStyle = st.accent;
-      const rx = meta.align === 'center' ? W / 2 - 40 * k : meta.align === 'right' ? W - m - 80 * k : m;
-      ctx.fillRect(rx, metaY - 24 * k, 80 * k, 4 * k);
+      const rx = meta.align === 'center' ? W / 2 - 30 : meta.align === 'right' ? W - m - 60 : m;
+      ctx.fillRect(rx, metaY - 22, 60, 3);
     }
-    const textW = metaLines.length ? Math.max(...metaLines.map(l => { ctx.font = `${l.bold ? 700 : 400} ${ms}px Inter, system-ui`; return ctx.measureText(l.t).width; })) : 0;
-    const blockW = thumb + (thumb && textW ? ms * 0.7 : 0) + textW;
+    const widths = metaLines.map(l => { ctx.font = metaFont(l); setSpacing(ctx, l.kind === 'artist' ? ms * 0.12 : 0); const w = ctx.measureText(l.kind === 'artist' ? l.t.toLocaleUpperCase('fr') : l.t).width; setSpacing(ctx, 0); return w; });
+    const textW = widths.length ? Math.max(...widths) : 0;
+    const gap = thumb && textW ? ms * 0.65 : 0;
+    const blockW = Math.min(W - 2 * m, thumb + gap + textW);
     let bx = meta.align === 'center' ? (W - blockW) / 2 : meta.align === 'right' ? W - m - blockW : m;
-    if (thumb) { drawCoverSquare(ctx, imgs.cover, bx, metaY + (metaH - thumb) / 2, thumb, 8 * k, st.accent); bx += thumb + ms * 0.7; }
-    let ty = metaY + (metaH - metaLines.length * ms * 1.35) / 2;
+    if (thumb) { drawCoverSquare(ctx, imgs.cover, bx, metaY + (metaH - thumb) / 2, thumb, 6, st.accent); bx += thumb + gap; }
+    let ty = metaY + (metaH - metaLines.length * lineGap) / 2;
     ctx.textAlign = 'left';
-    for (const l of metaLines) {
-      ty += ms * 1.35;
-      ctx.font = `${l.bold ? 700 : 400} ${ms}px Inter, system-ui`;
-      ctx.fillStyle = st.color;
-      ctx.globalAlpha = l.bold ? 1 : 0.75;
-      ctx.fillText(l.t, bx, ty - ms * 0.3, Math.max(10, W - m - bx));
+    metaLines.forEach((l, i) => {
+      ty += lineGap;
+      ctx.font = metaFont(l);
+      ctx.fillStyle = metaColor;
+      ctx.globalAlpha = l.kind === 'title' ? 1 : 0.72;
+      if (l.kind === 'artist') setSpacing(ctx, ms * 0.12);
+      const lx = thumb ? bx : meta.align === 'center' ? (W - widths[i]) / 2 : meta.align === 'right' ? W - m - widths[i] : bx;
+      ctx.fillText(l.kind === 'artist' ? l.t.toLocaleUpperCase('fr') : l.t, lx, ty - ms * 0.4, Math.max(10, W - m - lx));
+      setSpacing(ctx, 0);
       ctx.globalAlpha = 1;
-    }
+    });
   }
-  if (sigH) {
-    ctx.font = `500 ${ms * 1.2}px Caveat, cursive`;
-    ctx.fillStyle = st.color; ctx.globalAlpha = 0.85;
+  if (band) {
+    const by = H - bandH;
+    ctx.fillStyle = meta.band; ctx.fillRect(0, by, W, bandH);
+    ctx.fillStyle = metaColor; ctx.globalAlpha = 0.9; ctx.fillRect(0, by, W, 3); ctx.globalAlpha = 1;
+    const parts = [];
+    if (meta.showArtist && card.artist) parts.push(card.artist);
+    if (meta.showTitle && card.title) parts.push(`« ${card.title} »`);
+    const label = parts.join(', ').toLocaleUpperCase('fr');
+    const fs = ms * 1.05;
+    ctx.font = `600 ${fs}px Inter, system-ui`; ctx.textAlign = 'left'; ctx.fillStyle = metaColor;
+    const maxLW = sigH ? W * 0.52 : W - 2 * m;
+    // Retour à la ligne du libellé (2 lignes max, réduit si nécessaire).
+    const words = label.split(' '); const rows = []; let cur = '';
+    for (const w of words) { const t = cur ? cur + ' ' + w : w; if (cur && ctx.measureText(t).width > maxLW) { rows.push(cur); cur = w; } else cur = t; }
+    if (cur) rows.push(cur);
+    const shown = rows.slice(0, 2); if (rows.length > 2) shown[1] = rows.slice(1).join(' ');
+    let ly = by + bandH / 2 - (shown.length - 1) * fs * 0.6 + fs * 0.36;
+    for (const r of shown) { ctx.fillText(r, m, ly, maxLW); ly += fs * 1.2; }
+    if (sigH) {
+      ctx.font = `600 ${ms * 0.95}px "Space Grotesk", Inter, sans-serif`; setSpacing(ctx, ms * 0.35);
+      ctx.textAlign = 'right'; ctx.fillText(meta.signature.toLocaleUpperCase('fr'), W - m, by + bandH / 2 + ms * 0.34, W * 0.36);
+      setSpacing(ctx, 0);
+    }
+  } else if (sigH) {
+    ctx.font = `500 ${ms * 1.3}px Caveat, cursive`;
+    ctx.fillStyle = metaColor; ctx.globalAlpha = 0.85;
     const [v, hpos] = meta.sigPos.split('-');
     ctx.textAlign = hpos === 'center' ? 'center' : hpos;
     const sx = hpos === 'center' ? W / 2 : hpos === 'right' ? W - m : m;
@@ -363,7 +439,7 @@ export function renderCard(canvas, card, imgs = {}, opts = {}) {
     ctx.globalAlpha = 1;
   }
 
-  return { overflow: !cur.ok, fitSize, lines: L.lines.length };
+  return { overflow: !cur.ok, fitSize, size, lines: L.lines.length };
 }
 
 // Capacité de lignes environ disponible : utilisé pour répartir un long extrait.

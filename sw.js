@@ -1,10 +1,10 @@
 // Service worker : met l'application en cache pour un usage hors connexion.
 // Incrémentez VERSION à chaque modification des fichiers de l'application.
-const VERSION = 'verso-v1';
+const VERSION = 'verso-v2';
 const ASSETS = [
   './', './index.html', './manifest.webmanifest', './css/styles.css', './css/fonts.css',
   './js/app.js', './js/db.js', './js/render.js', './js/sources.js', './js/studio.js',
-  './icons/icon-192.png', './icons/icon-512.png',
+  './icons/icon.png', './icons/logo.png',
   "./fonts/BebasNeue-400-normal-latin-ext.woff2",
   "./fonts/BebasNeue-400-normal-latin.woff2",
   "./fonts/Caveat-500-normal-latin-ext.woff2",

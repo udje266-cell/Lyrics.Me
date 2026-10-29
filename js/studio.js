@@ -6,8 +6,9 @@ const clone = o => JSON.parse(JSON.stringify(o));
 
 export async function newCard(song, excerpt, extra = {}) {
   const signature = await db.setting('signature', '');
-  const template = extra.template || 'minimal';
+  const template = extra.template || 'bandeau';
   const style = extra.style ? clone(extra.style) : templatePreset(template);
+  if (style.bg.kind === 'cover' && !(song && song.cover)) style.bg.kind = 'gradient';
   if (signature) style.meta.signature = style.meta.signature || signature;
   const now = Date.now();
   const card = {
@@ -103,7 +104,7 @@ export async function mountStudio(view, id) {
       if (lastInfo.overflow) {
         w.hidden = false;
         w.innerHTML = `<span>Le texte dépasse de la carte : il serait coupé.</span><span class="row"><button id="fit">Réduire à ${lastInfo.fitSize}</button><button id="split">Répartir sur plusieurs cartes</button></span>`;
-        w.querySelector('#fit').onclick = () => { card.style.size = lastInfo.fitSize; change(); refreshPanel(); };
+        w.querySelector('#fit').onclick = () => { card.style.size = lastInfo.fitSize; card.style.autoFit = false; change(); refreshPanel(); };
         w.querySelector('#split').onclick = splitCards;
       } else w.hidden = true;
     });
@@ -197,7 +198,9 @@ export async function mountStudio(view, id) {
       <div class="field"><label for="t-font">Police</label><select id="t-font">${FONTS.map(x => `<option value="${x.id}" ${x.id === st.font ? 'selected' : ''}>${x.label}</option>`).join('')}</select></div>
       <div class="row field">${f.weights.length > 1 ? seg('weight', f.weights.map(w => [w, w >= 700 ? 'Gras' : 'Normal']), st.weight) : ''}
         <button class="chip ${st.italic ? 'on' : ''}" id="t-it">Italique</button><button class="chip ${st.uppercase ? 'on' : ''}" id="t-up">MAJUSCULES</button></div>
-      ${reg('size', 'Taille', 20, 180, 1, () => st.size, v => st.size = v, v => v + ' px')}
+      ${reg('size', st.autoFit ? 'Taille maximale' : 'Taille', 20, 200, 1, () => st.size, v => st.size = v, v => v + ' px')}
+      <div class="row field"><button class="chip ${st.autoFit ? 'on' : ''}" id="t-fit">Remplir la carte</button><button class="chip ${st.shadow ? 'on' : ''}" id="t-shadow">Ombre</button>
+        <button class="chip ${st.lineBg ? 'on' : ''}" id="t-bars">Bandeaux derrière les lignes</button>${st.lineBg ? `<input type="color" id="t-barcolor" value="${st.lineBg}" aria-label="Couleur des bandeaux">` : ''}</div>
       <div class="field"><label>Alignement</label>${seg('align', [['left', 'Gauche'], ['center', 'Centre'], ['right', 'Droite']], st.align)}</div>
       <div class="field row"><label style="margin:0">Couleur</label><input type="color" id="t-color" value="${st.color}">${swatches('color')}</div>
       ${reg('lineHeight', 'Interligne', 0.8, 2, 0.02, () => st.lineHeight, v => st.lineHeight = v, v => (+v).toFixed(2))}
@@ -229,6 +232,7 @@ export async function mountStudio(view, id) {
         ${reg('imgY', 'Vertical', -2, 2, 0.01, () => bg.imgY, v => bg.imgY = v, v => (+v).toFixed(2))}
         ${reg('blur', 'Flou', 0, 60, 1, () => bg.blur, v => bg.blur = v, v => v + ' px')}` : ''}
       ${reg('veil', 'Voile (gauche : clair · droite : sombre)', -0.85, 0.85, 0.01, () => bg.veil, v => bg.veil = v, v => v == 0 ? 'aucun' : v > 0 ? 'sombre ' + pct(v) : 'clair ' + pct(-v))}
+      <div class="field"><button class="chip ${bg.veilMode === 'gradient' ? 'on' : ''}" id="b-vgrad">Voile progressif (plus dense en bas)</button></div>
       <div class="field"><label for="b-tex">Texture</label><select id="b-tex">${Object.entries(TEXTURES).map(([k, l]) => `<option value="${k}" ${bg.texture === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
       ${bg.texture !== 'none' ? reg('textureAlpha', 'Intensité de la texture', 0.05, 0.8, 0.01, () => bg.textureAlpha, v => bg.textureAlpha = v, pct) : ''}
       <div class="card-box"><div class="row spread"><h3 style="margin:0">Palette de l'image</h3>${palette.length ? `<button class="chip ${editPalette ? 'on' : ''}" id="p-edit">Modifier</button>` : ''}</div>
@@ -246,6 +250,8 @@ export async function mountStudio(view, id) {
         <div class="row field"><button class="chip ${m.showTitle ? 'on' : ''}" data-mt="showTitle">Titre</button><button class="chip ${m.showArtist ? 'on' : ''}" data-mt="showArtist">Artiste</button>
           <button class="chip ${m.showCover ? 'on' : ''}" data-mt="showCover">Pochette</button><button class="chip ${m.showSignature ? 'on' : ''}" data-mt="showSignature">Signature</button></div>
         <div class="row field">${seg('mpos', [['top', 'En haut'], ['bottom', 'En bas']], m.pos)}${seg('malign', [['left', 'Gauche'], ['center', 'Centre'], ['right', 'Droite']], m.align)}</div>
+        <div class="field row"><button class="chip ${m.band ? 'on' : ''}" id="m-band">Bandeau en bas</button>${m.band ? `<input type="color" id="m-bandc" value="${m.band}" aria-label="Couleur du bandeau">` : ''}</div>
+        <div class="field row"><label style="margin:0">Couleur des informations</label><input type="color" id="m-color" value="${m.color || card.style.color}"></div>
         ${reg('msize', 'Taille des informations', 18, 56, 1, () => m.size, v => m.size = v, v => v + ' px')}
         ${m.showSignature ? `<div class="grid2"><div class="field"><label for="m-sig">Signature</label><input id="m-sig" value="${esc(m.signature)}" placeholder="Votre pseudonyme"></div>
           <div class="field"><label for="m-sigpos">Position</label><select id="m-sigpos">${[['bottom-right', 'En bas à droite'], ['bottom-left', 'En bas à gauche'], ['bottom-center', 'En bas au centre'], ['top-right', 'En haut à droite'], ['top-left', 'En haut à gauche']].map(([v, l]) => `<option value="${v}" ${m.sigPos === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div></div>` : ''}
@@ -310,6 +316,14 @@ export async function mountStudio(view, id) {
     on('#t-font', 'onchange', e => { st.font = e.target.value; const f = fontById(st.font); if (!f.weights.includes(st.weight)) st.weight = f.weights[f.weights.length - 1]; change(); refreshPanel(); });
     on('#t-it', 'onclick', () => { st.italic = !st.italic; change(); refreshPanel(); });
     on('#t-up', 'onclick', () => { st.uppercase = !st.uppercase; change(); refreshPanel(); });
+    on('#t-fit', 'onclick', () => { st.autoFit = !st.autoFit; change(); refreshPanel(); });
+    on('#t-shadow', 'onclick', () => { st.shadow = !st.shadow; change(); refreshPanel(); });
+    on('#t-bars', 'onclick', () => { if (st.lineBg) st.lineBg = ''; else { st.lineBg = '#ffffff'; st.color = '#111111'; } change(); refreshPanel(); });
+    on('#t-barcolor', 'oninput', e => { st.lineBg = e.target.value; change(); });
+    on('#b-vgrad', 'onclick', () => { bg.veilMode = bg.veilMode === 'gradient' ? 'flat' : 'gradient'; change(); refreshPanel(); });
+    on('#m-band', 'onclick', () => { m.band = m.band ? '' : '#000000'; if (m.band) m.color = '#ffffff'; change(); refreshPanel(); });
+    on('#m-bandc', 'oninput', e => { m.band = e.target.value; change(); });
+    on('#m-color', 'oninput', e => { m.color = e.target.value; change(); });
     on('#t-dim', 'onclick', () => { st.dimOthers = !st.dimOthers; change(); refreshPanel(); });
     on('#t-color', 'oninput', e => { st.color = e.target.value; change(); });
     on('#t-accent', 'oninput', e => { st.accent = e.target.value; change(); });
