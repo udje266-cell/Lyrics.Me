@@ -54,7 +54,7 @@ export async function renderAlbumForm(id) {
   const tracks = id ? sortTracks((await db.all('songs')).filter(s => s.albumId === id && !s.deletedAt)) : [];
   let cover = album.cover || null;
   view.innerHTML = `<h1>${id ? 'Modifier l\'album' : 'Ajouter un album'}</h1>
-    ${id ? '' : `<div class="seg" style="margin-bottom:18px">${[['manuel', 'Morceau'], ['album', 'Album'], ['discographie', 'Artiste'], ['recherche', 'Recherche'], ['lien', 'Lien']].map(([k, l]) => `<button type="button" data-mode="${k}" class="${k === 'album' ? 'on' : ''}">${l}</button>`).join('')}</div>`}
+    ${id ? '' : `<div class="seg" style="margin-bottom:18px">${[['manuel', 'Morceau'], ['album', 'Album'], ['recherche', 'Paroles en ligne'], ['lien', 'Lien']].map(([k, l]) => `<button type="button" data-mode="${k}" class="${k === 'album' ? 'on' : ''}">${l}</button>`).join('')}</div>`}
     <form id="albumform" class="stack" autocomplete="off">
       <div class="grid2">
         <div><label for="a-title">Titre de l'album *</label><input id="a-title" required value="${esc(album.title)}"></div>

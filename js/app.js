@@ -5,6 +5,9 @@ import { mountStudio, newCard } from './studio.js';
 import { renderAlbumForm, renderAlbum, attachAlbum, liveAlbums, albumRow } from './albums.js';
 import { renderDiscography } from './discography.js';
 import { renderArtist, renderArtistByName, artistHref } from './artists.js';
+import { renderProfile } from './profile.js';
+import { renderSearch } from './search.js';
+import { loadNews, loadCharts, newsAvailable } from './feeds.js';
 
 // --- Utilitaires ----------------------------------------------------------
 
@@ -136,7 +139,9 @@ const routes = [
   [/^\/morceau\/([\w]+)\/modifier$/, renderEdit, 'library'],
   [/^\/studio\/([\w]+)$/, (id) => mountStudio(view, id), 'gallery'],
   [/^\/creations$/, renderGallery, 'gallery'],
-  [/^\/reglages$/, renderSettings, 'settings'],
+  [/^\/reglages$/, renderSettings, 'profile'],
+  [/^\/profil$/, renderProfile, 'profile'],
+  [/^\/recherche$/, renderSearch, 'search'],
 ];
 
 // Logo : variante au mot blanc quand l'interface est sombre.
@@ -190,7 +195,7 @@ function heroHtml(all) {
   }
   const pick = pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
   const actions = `<div class="hero-actions"><a class="btn primary" href="#/ajouter/manuel">Ajouter des paroles</a>
-      <span class="hero-links"><a href="#/ajouter/discographie">un artiste</a><a href="#/ajouter/album">un album</a><a href="#/ajouter/recherche">rechercher</a><a href="#/ajouter/lien">depuis un lien</a></span></div>`;
+      <span class="hero-links"><a href="#/ajouter/album">un album</a><a href="#/ajouter/recherche">paroles en ligne</a><a href="#/ajouter/lien">depuis un lien</a></span></div>`;
   if (!pick) return `<div class="hero"><img class="hero-logo brand-logo" src="icons/logo.png" alt="Verso" width="2172" height="724" fetchpriority="high">
       <p class="hero-lede">Gardez les paroles que vous aimez et transformez vos passages préférés en cartes.</p>${actions}</div>`;
   const words = pick.t.split(' '), mid = Math.ceil(words.length / 2);
@@ -207,7 +212,10 @@ async function renderHome() {
   const drafts = cards.filter(c => c.draft).sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 6);
   const passages = (await db.all('passages')).sort((a, b) => b.createdAt - a.createdAt).slice(0, 4);
   view.innerHTML = `
+    <div id="np"></div>
     ${heroHtml(all)}
+    <section id="news" hidden></section>
+    <section id="trends" hidden></section>
     ${drafts.length ? `<section><div class="page-head"><h2>Brouillons</h2><a href="#/creations">Tout voir</a></div><div class="gallery">${drafts.map(tileHtml).join('')}</div></section>` : ''}
     <section><div class="page-head"><h2>Ajoutés récemment</h2><a href="#/bibliotheque">Bibliothèque</a></div>
       ${recent.length ? `<ul class="songs">${recent.map(x => songRow(x)).join('')}</ul>` : `<div class="empty">Votre bibliothèque est vide.<br><br><a class="btn primary" href="#/ajouter">Ajouter un premier morceau</a></div>`}
@@ -215,7 +223,98 @@ async function renderHome() {
     ${passages.length ? `<section><h2>Passages favoris</h2>${passages.map(p => `<a class="card-box" style="display:block;text-decoration:none;color:inherit;margin-bottom:8px" href="#/morceau/${p.songId}">
       <div style="white-space:pre-line">${esc(p.text)}</div><div class="small muted" style="margin-top:6px">${esc(p.title)} · ${esc(p.artist)}${p.note ? ' — ' + esc(p.note) : ''}</div></a>`).join('')}</section>` : ''}`;
   bindFavs();
+  drawFeeds(false);
+  loadNews().then(n => drawNews(n)).catch(() => {});
+  loadCharts().then(c => drawTrends(c)).catch(() => {});
+  const stop = watchNowPlaying();
+  return stop;
 }
+
+const ago = t => {
+  if (!t) return '';
+  const m = Math.round((Date.now() - t) / 60000);
+  if (m < 60) return `il y a ${Math.max(1, m)} min`;
+  if (m < 1440) return `il y a ${Math.round(m / 60)} h`;
+  return new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' }).format(t);
+};
+
+async function drawFeeds() {
+  drawNews(await db.setting('newsCache', null));
+  drawTrends(await db.setting('chartsCache', null));
+}
+
+function drawNews(n) {
+  const el = $('#news'); if (!el) return;
+  if (!n || !n.items || !n.items.length) { el.hidden = true; return; }
+  el.hidden = false;
+  el.innerHTML = `<div class="page-head"><h2>Actualités</h2><span class="small muted">${ago(n.at)}</span></div>
+    <div class="news">${n.items.map(i => `<a class="news-item" href="${esc(i.link)}" target="_blank" rel="noopener">
+      ${i.img ? `<img src="${esc(i.img)}" alt="" loading="lazy" width="260" height="146">` : '<span class="news-ph" aria-hidden="true">“</span>'}
+      <span class="news-t">${esc(i.title)}</span><span class="news-m">${esc(i.source)}${i.date ? ', ' + ago(i.date) : ''}</span></a>`).join('')}</div>`;
+}
+
+function drawTrends(c) {
+  const el = $('#trends'); if (!el) return;
+  if (!c || !(c.tracks || []).length) { el.hidden = true; return; }
+  el.hidden = false;
+  const row = (t, k) => `<li class="song"><span class="rank">${k + 1}</span><a class="main" href="#/artiste/${t.artistId}">${t.cover ? `<img class="cover" src="${esc(t.cover)}" alt="" width="52" height="52" loading="lazy">` : ''}
+    <div style="min-width:0"><div class="t">${esc(t.title)}</div><div class="a">${esc(t.artist)}</div></div></a></li>`;
+  el.innerHTML = `<div class="page-head"><h2>Tendances</h2><span class="small muted">Deezer</span></div>
+    <div class="seg trend-tabs" style="margin-bottom:10px"><button class="on" data-tr="tracks">Top du moment</button>${(c.africa || []).length ? '<button data-tr="africa">Musique africaine</button>' : ''}</div>
+    <ul class="songs" id="trend-list">${c.tracks.slice(0, 10).map(row).join('')}</ul>
+    ${(c.albums || []).length ? `<h3 style="margin-top:18px">Albums du moment</h3><div class="releases">${c.albums.slice(0, 6).map(a => `<div class="release"><a href="#/artiste/${a.artistId}"><img src="${esc(a.cover)}" alt="" width="250" height="250" loading="lazy"><span class="r-t">${esc(a.title)}</span><span class="r-m">${esc(a.artist)}</span></a></div>`).join('')}</div>` : ''}`;
+  el.querySelectorAll('[data-tr]').forEach(b => b.onclick = () => {
+    el.querySelectorAll('[data-tr]').forEach(x => x.classList.toggle('on', x === b));
+    el.querySelector('#trend-list').innerHTML = c[b.dataset.tr].slice(0, 10).map(row).join('');
+  });
+}
+
+// --- Musique en cours (application Android) -------------------------------
+function watchNowPlaying() {
+  if (!android || !android.nowPlaying) return null;
+  let last = '';
+  const tick = async () => {
+    const el = $('#np'); if (!el) return;
+    if (!android.nowPlayingAllowed()) {
+      if (await db.setting('npDismissed', false)) { el.innerHTML = ''; return; }
+      el.innerHTML = `<div class="np np-off"><div><b>Afficher la musique que vous écoutez</b><br><span class="small muted">Verso peut reconnaître le titre joué par Spotify, YouTube Music, Deezer, Boomplay… pour ouvrir ses paroles en un geste.</span></div>
+        <div class="row"><button class="primary" id="np-on">Activer</button><button class="ghost" id="np-no">Plus tard</button></div></div>`;
+      el.querySelector('#np-on').onclick = () => android.openNowPlayingSettings();
+      el.querySelector('#np-no').onclick = async () => { await db.setSetting('npDismissed', true); el.innerHTML = ''; };
+      return;
+    }
+    let np = null;
+    try { np = JSON.parse(android.nowPlaying() || 'null'); } catch {}
+    const key = np && np.title ? np.title + '|' + np.artist + '|' + np.playing : '';
+    if (key === last) return;
+    last = key;
+    if (!np || !np.title) { el.innerHTML = ''; return; }
+    el.innerHTML = `<div class="np"><span class="np-eq${np.playing ? ' on' : ''}" aria-hidden="true"><i></i><i></i><i></i></span>
+      <div style="min-width:0;flex:1"><span class="small muted">${np.playing ? 'En écoute' : 'En pause'} sur ${esc(np.app || 'une application')}</span>
+      <div class="np-t">${esc(np.title)}</div><div class="small muted">${esc(np.artist || '')}</div></div>
+      <button class="primary" id="np-ly">Paroles</button></div>`;
+    el.querySelector('#np-ly').onclick = () => openNowPlaying(np);
+  };
+  tick();
+  const t = setInterval(tick, 8000);
+  const vis = () => { if (!document.hidden) tick(); };
+  document.addEventListener('visibilitychange', vis);
+  return () => { clearInterval(t); document.removeEventListener('visibilitychange', vis); };
+}
+
+async function openNowPlaying(np) {
+  const artist = String(np.artist || '').split(/,|&| feat\.? | ft\.? /i)[0].trim();
+  const mine = (await liveSongs()).find(s => norm(s.title) === norm(np.title) && (!artist || norm(s.artist) === norm(artist)));
+  if (mine) return go('#/morceau/' + mine.id);
+  const btn = $('#np-ly'); if (btn) { btn.disabled = true; btn.textContent = 'Recherche…'; }
+  let r = null;
+  try { r = await findLyrics(np.title, artist, np.album || '', 0); } catch {}
+  const pre = { title: np.title, artist, album: np.album || '', lyrics: r ? r.lyrics : '', sourceName: r ? 'LRCLIB' : '', sourceUrl: r ? r.sourceUrl : '' };
+  try { sessionStorage.setItem('verso-prefill', JSON.stringify(pre)); } catch {}
+  if (!r) toast('Paroles introuvables sur LRCLIB : collez-les pour ajouter ce titre.');
+  go('#/ajouter/manuel');
+}
+
 
 function tileHtml(c) {
   return `<a class="tile" href="#/studio/${c.id}">${c.thumb ? `<img src="${blobUrl('thumb-' + c.id + c.updatedAt, c.thumb)}" alt="Aperçu de la carte" width="324" height="324" loading="lazy">` : '<img alt="">'}
@@ -441,7 +540,7 @@ function bindSongForm(song, onSaved) {
 }
 
 async function renderAdd(mode = 'manuel') {
-  const tabs = `<div class="seg" style="margin-bottom:18px">${[['manuel', 'Morceau'], ['album', 'Album'], ['discographie', 'Artiste'], ['recherche', 'Recherche'], ['lien', 'Lien']].map(([k, l]) => `<button data-mode="${k}" class="${mode === k ? 'on' : ''}">${l}</button>`).join('')}</div>`;
+  const tabs = `<div class="seg" style="margin-bottom:18px">${[['manuel', 'Morceau'], ['album', 'Album'], ['recherche', 'Paroles en ligne'], ['lien', 'Lien']].map(([k, l]) => `<button data-mode="${k}" class="${mode === k ? 'on' : ''}">${l}</button>`).join('')}</div>`;
   view.innerHTML = `<h1>Ajouter un morceau</h1>${tabs}<div id="addbody"></div>`;
   $$('[data-mode]').forEach(b => b.onclick = () => go('#/ajouter/' + b.dataset.mode));
   const body = $('#addbody');

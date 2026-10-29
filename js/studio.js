@@ -6,7 +6,8 @@ import { esc, toast, safe, go, openDialog, confirmDialog, download, pickArtwork,
 const clone = o => JSON.parse(JSON.stringify(o));
 
 export async function newCard(song, excerpt, extra = {}) {
-  const signature = await db.setting('signature', '');
+  const prof = await db.setting('profile', null);
+  const signature = (await db.setting('signature', '')) || (prof && prof.handle ? '@' + prof.handle : '');
   const template = extra.template || 'bandeau';
   const style = extra.style ? clone(extra.style) : templatePreset(template);
   if (style.bg.kind === 'cover' && !(song && song.cover)) style.bg.kind = 'ambiance';

@@ -1,7 +1,14 @@
 package me.lyrics.verso;
 
 import android.app.Activity;
+import android.content.ComponentName;
 import android.content.ContentValues;
+import android.content.pm.PackageManager;
+import android.media.MediaMetadata;
+import android.media.session.MediaController;
+import android.media.session.MediaSessionManager;
+import android.media.session.PlaybackState;
+import android.provider.Settings;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
@@ -21,7 +28,15 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
 
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -146,8 +161,74 @@ public class MainActivity extends Activity {
         web.saveState(out);
     }
 
-    /** Fonctions appelées depuis l'application web (enregistrer, partager). */
+    /** Fonctions appelées depuis l'application web (enregistrer, partager, musique en cours, flux). */
     private class Bridge {
+        /** Musique en cours dans une autre application, en JSON ; "" si rien ou accès non accordé. */
+        @JavascriptInterface
+        public String nowPlaying() {
+            try {
+                MediaSessionManager m = (MediaSessionManager) getSystemService(MEDIA_SESSION_SERVICE);
+                List<MediaController> list = m.getActiveSessions(new ComponentName(MainActivity.this, NowPlayingService.class));
+                MediaController best = null;
+                for (MediaController c : list) {
+                    PlaybackState st = c.getPlaybackState();
+                    if (c.getMetadata() == null) continue;
+                    if (st != null && st.getState() == PlaybackState.STATE_PLAYING) { best = c; break; }
+                    if (best == null) best = c;
+                }
+                if (best == null) return "";
+                MediaMetadata md = best.getMetadata();
+                JSONObject o = new JSONObject();
+                o.put("title", md.getString(MediaMetadata.METADATA_KEY_TITLE));
+                String artist = md.getString(MediaMetadata.METADATA_KEY_ARTIST);
+                if (artist == null) artist = md.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST);
+                o.put("artist", artist);
+                o.put("album", md.getString(MediaMetadata.METADATA_KEY_ALBUM));
+                PlaybackState st = best.getPlaybackState();
+                o.put("playing", st != null && st.getState() == PlaybackState.STATE_PLAYING);
+                String app = best.getPackageName();
+                try { app = getPackageManager().getApplicationLabel(getPackageManager().getApplicationInfo(app, 0)).toString(); } catch (PackageManager.NameNotFoundException ignored) { }
+                o.put("app", app);
+                return o.toString();
+            } catch (SecurityException e) {
+                return "";
+            } catch (Exception e) {
+                return "";
+            }
+        }
+
+        @JavascriptInterface
+        public boolean nowPlayingAllowed() {
+            String flat = Settings.Secure.getString(getContentResolver(), "enabled_notification_listeners");
+            return flat != null && flat.contains(getPackageName());
+        }
+
+        @JavascriptInterface
+        public void openNowPlayingSettings() {
+            runOnUiThread(() -> startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)));
+        }
+
+        /** Télécharge un flux (RSS…) sans la restriction CORS du navigateur ; réponse via window.__versoFetched. */
+        @JavascriptInterface
+        public void fetchText(String id, String url) {
+            new Thread(() -> {
+                String body = "", err = "";
+                try {
+                    HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
+                    c.setConnectTimeout(10000); c.setReadTimeout(15000);
+                    c.setRequestProperty("User-Agent", "Mozilla/5.0 (Android) Verso/1.0");
+                    c.setInstanceFollowRedirects(true);
+                    try (BufferedReader r = new BufferedReader(new InputStreamReader(c.getInputStream(), StandardCharsets.UTF_8))) {
+                        StringBuilder sb = new StringBuilder(); String line;
+                        while ((line = r.readLine()) != null && sb.length() < 2_000_000) sb.append(line).append('\n');
+                        body = sb.toString();
+                    }
+                } catch (Exception e) { err = String.valueOf(e.getMessage()); }
+                final String js = "window.__versoFetched && window.__versoFetched(" + JSONObject.quote(id) + "," + JSONObject.quote(body) + "," + JSONObject.quote(err) + ")";
+                runOnUiThread(() -> web.evaluateJavascript(js, null));
+            }).start();
+        }
+
         @JavascriptInterface
         public String saveFile(String name, String mime, String base64) {
             try {

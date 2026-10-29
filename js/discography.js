@@ -14,11 +14,9 @@ const pause = ms => new Promise(r => setTimeout(r, ms));
 export async function renderDiscography() {
   const view = document.getElementById('view');
   view.innerHTML = `<h1>Importer une discographie</h1>
-    <div class="seg" style="margin-bottom:18px">${[['manuel', 'Morceau'], ['album', 'Album'], ['discographie', 'Artiste'], ['recherche', 'Recherche'], ['lien', 'Lien']].map(([k, l]) => `<button type="button" data-mode="${k}" class="${k === 'discographie' ? 'on' : ''}">${l}</button>`).join('')}</div>
     <p class="small muted">Verso récupère les albums, EP et singles d'un artiste avec leurs pochettes (Deezer), puis les paroles disponibles (LRCLIB). Les titres sans paroles sont ajoutés avec la mention « paroles manquantes ». Connexion internet nécessaire.</p>
     <form id="dform" class="row field"><input id="d-q" aria-label="Nom de l'artiste" placeholder="Nom de l'artiste, ex. Magic System…" style="flex:1" autocomplete="off"><button class="primary">Chercher</button></form>
     <div id="dres"></div>`;
-  $$('[data-mode]').forEach(b => b.onclick = () => go('#/ajouter/' + b.dataset.mode));
   $('#dform').onsubmit = async e => {
     e.preventDefault();
     const q = $('#d-q').value.trim(); if (!q) return;

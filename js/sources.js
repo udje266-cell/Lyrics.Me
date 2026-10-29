@@ -178,13 +178,22 @@ export function splitFeat(title) {
 
 // Paroles d'un titre précis : correspondance exacte, puis recherche (durée à ±3 s).
 export async function findLyrics(title, artist, album, duration) {
-  const get = new URLSearchParams({ track_name: title, artist_name: artist, album_name: album || '', duration: Math.round(duration || 0) });
-  try {
-    const res = await fetch(`${LRCLIB}/get?${get}`);
-    if (res.ok) { const r = await res.json(); if (r.plainLyrics && !r.instrumental) return toResult(r); }
-    if (res.status === 429) await new Promise(r => setTimeout(r, 2000));
-  } catch { /* on tente la recherche */ }
-  const list = await fetchJson(`${LRCLIB}/search?${new URLSearchParams({ track_name: title, artist_name: artist })}`).catch(() => []);
+  // La correspondance exacte exige une durée (1 à 3600 s) : sans elle, on passe à la recherche.
+  if (duration >= 1) {
+    const get = new URLSearchParams({ track_name: title, artist_name: artist, album_name: album || '', duration: Math.round(duration) });
+    try {
+      const res = await fetch(`${LRCLIB}/get?${get}`);
+      if (res.ok) { const r = await res.json(); if (r.plainLyrics && !r.instrumental) return toResult(r); }
+      if (res.status === 429 || res.status === 503) await new Promise(r => setTimeout(r, 2000));
+    } catch { /* on tente la recherche */ }
+  }
+  const url = `${LRCLIB}/search?${new URLSearchParams({ track_name: title, artist_name: artist })}`;
+  let list = [];
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try { list = await fetchJson(url); break; }
+    catch (e) { if (!/erreur \((429|503)\)|Trop de requêtes/.test(e.message) || attempt === 2) break; await new Promise(r => setTimeout(r, 1500 * (attempt + 1))); }
+  }
+  if (!Array.isArray(list)) list = [];
   const ok = list.filter(r => r.plainLyrics && !r.instrumental);
   const best = ok.find(r => !duration || Math.abs((r.duration || 0) - duration) <= 3) || ok[0];
   return best ? toResult(best) : null;
@@ -227,4 +236,16 @@ export async function artistBio(name) {
     return { text: page.extract.trim(), url: page.fullurl || `https://${lang}.wikipedia.org/wiki/${encodeURIComponent(page.title)}`, title: page.title, lang };
   }
   return null;
+}
+
+// --- Tendances (Deezer, adaptées au pays de l'utilisateur) -----------------
+export async function charts() {
+  const [all, africa] = await Promise.all([jsonp('/chart/0'), jsonp('/editorial/2/charts').catch(() => ({}))]);
+  const tr = t => ({ title: t.title, artist: t.artist.name, artistId: t.artist.id, cover: t.album && t.album.cover_medium, rank: t.position });
+  const al = a => ({ title: a.title, artist: a.artist.name, artistId: a.artist.id, cover: a.cover_medium });
+  return {
+    tracks: ((all.tracks && all.tracks.data) || []).map(tr),
+    albums: ((all.albums && all.albums.data) || []).map(al),
+    africa: ((africa.tracks && africa.tracks.data) || []).map(tr),
+  };
 }
