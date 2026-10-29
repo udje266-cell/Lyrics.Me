@@ -1,5 +1,5 @@
 import { db, uid, exportBackup, importBackup } from './db.js';
-import { searchLyrics, importFromUrl } from './sources.js';
+import { searchLyrics, importFromUrl, findArtwork, fetchImage } from './sources.js';
 import { compressImage } from './render.js';
 import { mountStudio, newCard } from './studio.js';
 
@@ -42,6 +42,36 @@ export function openDialog(html, bind) {
 export function confirmDialog(message, okLabel = 'Confirmer', danger = false) {
   return openDialog(`<form method="dialog"><p>${esc(message)}</p><div class="row" style="justify-content:flex-end">
     <button value="no">Annuler</button><button value="ok" class="${danger ? 'danger' : 'primary'}">${esc(okLabel)}</button></div></form>`).then(v => v === 'ok');
+}
+
+// Fenêtre de choix d'une image d'artiste ou d'album (Deezer). Renvoie { blob, label } ou null.
+const artworkCache = new Map();
+export async function pickArtwork(title, artist) {
+  let chosen = null;
+  const key = (title || '') + '|' + (artist || '');
+  const p = openDialog(`<form method="dialog"><h3>Images de l'artiste et de l'album</h3><div id="aw" class="small muted">Recherche de « ${esc(title || '')} » — ${esc(artist || '')}…</div>
+    <div class="row" style="justify-content:flex-end;margin-top:12px"><button value="">Fermer</button></div></form>`);
+  const box = dialog.querySelector('#aw');
+  try {
+    if (!artist && !title) throw new Error('Renseignez au moins le nom de l\'artiste.');
+    const res = artworkCache.get(key) || await findArtwork(title, artist);
+    artworkCache.set(key, res);
+    if (!res.images.length) box.innerHTML = `<div class="notice">Aucune image trouvée pour cet artiste sur Deezer. Vérifiez l'orthographe du nom, ou utilisez une photo de votre galerie.</div>`;
+    else {
+      box.innerHTML = `<p>Reconnu : <b>${esc(res.artist || '')}</b>${res.album ? ' · album « ' + esc(res.album) + ' »' : ''}</p>
+        <div class="gallery" style="grid-template-columns:repeat(auto-fill,minmax(96px,1fr))">${res.images.map((im, i) => `<button type="button" class="tile" data-aw="${i}" style="padding:0">
+        <img src="${esc(im.thumb)}" alt="" loading="lazy"><div>${im.kind === 'artist' ? '👤 ' : '💿 '}${esc(im.label)}</div></button>`).join('')}</div>
+        <p class="small muted">Images fournies par Deezer, pour un usage personnel. Leurs droits appartiennent aux artistes et à leurs labels.</p>`;
+      box.querySelectorAll('[data-aw]').forEach(b => b.onclick = async () => {
+        const im = res.images[+b.dataset.aw];
+        b.style.opacity = .5;
+        try { chosen = { blob: await compressImage(await fetchImage(im.url)), label: im.label + ' (Deezer)' }; dialog.close(); }
+        catch (e) { toast(e.message, { err: true }); b.style.opacity = 1; }
+      });
+    }
+  } catch (e) { box.innerHTML = `<div class="notice err">${esc(e.message)}</div>`; }
+  await p;
+  return chosen;
 }
 
 const urlCache = new Map();
@@ -266,6 +296,7 @@ async function songForm(song, { submitLabel, intro = '' } = {}) {
     <div class="row" style="align-items:flex-end">
       <div id="cover-prev">${song.cover ? `<img class="cover" src="${URL.createObjectURL(song.cover)}" alt="">` : ''}</div>
       <div style="flex:1"><label for="f-cover">Pochette ou image</label><input type="file" id="f-cover" accept="image/*"></div>
+      <button type="button" id="f-findcover">🎵 Trouver la pochette</button>
       ${song.cover ? '<button type="button" id="f-nocover" class="ghost">Retirer</button>' : ''}
     </div>
     <div><label for="f-note">Note personnelle</label><textarea id="f-note" style="min-height:80px">${esc(song.note)}</textarea></div>
@@ -287,6 +318,10 @@ function bindSongForm(song, onSaved) {
     const f = e.target.files[0]; if (!f) return;
     try { cover = await compressImage(f, 1200); $('#cover-prev').innerHTML = `<img class="cover" src="${URL.createObjectURL(cover)}" alt="">`; }
     catch (err) { toast(err.message, { err: true }); }
+  };
+  $('#f-findcover').onclick = async () => {
+    const r = await pickArtwork($('#f-title').value.trim(), $('#f-artist').value.trim());
+    if (r) { cover = r.blob; $('#cover-prev').innerHTML = `<img class="cover" src="${URL.createObjectURL(cover)}" alt="">`; toast('Image choisie : elle sera enregistrée avec le morceau.'); }
   };
   if ($('#f-nocover')) $('#f-nocover').onclick = () => { cover = null; $('#cover-prev').innerHTML = ''; };
   $('#songform').onsubmit = async e => {

@@ -72,3 +72,71 @@ export async function importFromUrl(url) {
     url: u.href,
   };
 }
+
+// --- Images d'artiste et d'album (Deezer) ---------------------------------
+//
+// API publique Deezer : gratuite, sans clé. Elle n'autorise pas les appels directs depuis
+// un navigateur (pas d'en-tête CORS), mais propose le JSONP. Les images (1000 × 1000 px)
+// sont, elles, servies avec CORS : elles peuvent être dessinées et exportées dans une carte.
+// Images à usage personnel ; leurs droits appartiennent aux artistes et labels.
+
+const DEEZER = 'https://api.deezer.com';
+
+function jsonp(path, params = {}) {
+  if (!navigator.onLine) return Promise.reject(new Error('Pas de connexion internet : la recherche d\'images est indisponible.'));
+  return new Promise((resolve, reject) => {
+    const cb = 'verso_dz_' + Math.random().toString(36).slice(2);
+    const q = new URLSearchParams({ ...params, output: 'jsonp', callback: cb });
+    const s = document.createElement('script');
+    const done = () => { delete window[cb]; s.remove(); clearTimeout(t); };
+    const t = setTimeout(() => { done(); reject(new Error('Deezer ne répond pas. Réessayez plus tard.')); }, 12000);
+    window[cb] = data => { done(); data && data.error ? reject(new Error('Deezer : ' + (data.error.message || 'erreur'))) : resolve(data); };
+    s.onerror = () => { done(); reject(new Error('Deezer est inaccessible.')); };
+    s.src = `${DEEZER}${path}?${q}`;
+    document.head.append(s);
+  });
+}
+
+const simplify = s => String(s || '').toLocaleLowerCase('fr').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+
+// Reconnaît l'artiste et l'album d'un morceau et propose des images.
+// Renvoie { artist, album, images: [{ url, thumb, label, kind }] }.
+export async function findArtwork(title, artist) {
+  const mainArtist = String(artist || '').split(/\s+(?:feat\.?|ft\.?|&|x|avec)\s+|,/i)[0].trim();
+  let track = null;
+  if (title) {
+    const r = await jsonp('/search', { q: `artist:"${mainArtist}" track:"${title}"`, limit: 10 });
+    const list = r.data || [];
+    track = list.find(t => simplify(t.artist.name) === simplify(mainArtist)) || list[0] || null;
+    if (!track) {
+      const r2 = await jsonp('/search', { q: `${mainArtist} ${title}`, limit: 5 });
+      track = (r2.data || [])[0] || null;
+    }
+  }
+  let art = track ? track.artist : null;
+  if (!art && mainArtist) {
+    const ra = await jsonp('/search/artist', { q: mainArtist, limit: 5 });
+    art = (ra.data || []).find(a => simplify(a.name) === simplify(mainArtist)) || (ra.data || [])[0] || null;
+  }
+  if (!art && !track) return { artist: null, album: null, images: [] };
+  const images = [];
+  const seen = new Set();
+  const add = (url, thumb, label, kind) => { if (url && !seen.has(url) && !/\/images\/(artist|cover)\/\/|d41d8cd98f00b204e9800998ecf8427e/.test(url)) { seen.add(url); images.push({ url, thumb: thumb || url, label, kind }); } };
+  if (track) add(track.album.cover_xl, track.album.cover_medium, `Album « ${track.album.title} »`, 'album');
+  if (art) add(art.picture_xl, art.picture_medium, art.name, 'artist');
+  if (art) {
+    try {
+      const albums = await jsonp(`/artist/${art.id}/albums`, { limit: 24 });
+      for (const a of albums.data || []) add(a.cover_xl, a.cover_medium, `Album « ${a.title} »`, 'album');
+    } catch { /* la liste des albums est facultative */ }
+  }
+  return { artist: art ? art.name : null, album: track ? track.album.title : null, images };
+}
+
+// Télécharge une image proposée (pour l'enregistrer dans la carte ou le morceau).
+export async function fetchImage(url) {
+  let res;
+  try { res = await fetch(url, { mode: 'cors' }); } catch { throw new Error("Impossible de télécharger l'image."); }
+  if (!res.ok) throw new Error(`Téléchargement de l'image impossible (${res.status}).`);
+  return res.blob();
+}

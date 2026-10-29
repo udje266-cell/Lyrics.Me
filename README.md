@@ -47,7 +47,10 @@ Après une modification du code, incrémentez `VERSION` dans `sw.js` pour que le
 
 **LRCLIB** (https://lrclib.net) — vérifiée avant intégration : API publique, gratuite, sans clé ni compte, autorise les appels depuis le navigateur (CORS), et renvoie **les paroles complètes** (`plainLyrics`). Les paroles sont contribuées par sa communauté : l'application les présente toujours pour vérification et correction avant l'ajout, et conserve la source (« LRCLIB » + lien). Aucun coût.
 
+**Deezer** (images d'artiste et d'album) — vérifiée avant intégration : API publique gratuite, sans clé. Elle n'envoie pas d'en-tête CORS, donc l'application l'appelle en JSONP ; les images (1000 × 1000 px) sont servies avec CORS et peuvent donc être exportées dans les cartes. L'application reconnaît l'artiste et l'album à partir du titre et de l'artiste, puis propose la pochette de l'album, la photo de l'artiste et les pochettes de ses autres albums. Boutons : « 🎵 Trouver la pochette » (fiche du morceau) et « 🎵 Images de l'artiste » (studio). L'image choisie est copiée dans la carte (utilisable hors connexion) avec sa provenance. Usage personnel : les droits des images appartiennent aux artistes et à leurs labels. Aucun coût.
+
 Sources examinées et non retenues :
+- **iTunes Search** : pochettes seulement, pas de photos d'artiste. **MusicBrainz / Cover Art Archive** : pochettes seulement.
 - **Genius API** : fournit titres, artistes, pochettes, mais **pas les paroles** (seulement un lien vers la page). Extraire la page web serait contraire à ses conditions.
 - **Musixmatch API** : clé obligatoire ; l'offre gratuite ne fournit que 30 % des paroles, le texte complet exige une licence commerciale payante.
 - **Pages web quelconques** (Instagram, Facebook, sites d'artistes…) : un navigateur ne peut pas lire le contenu d'un autre site (CORS), et ces sites l'interdisent. L'application l'explique et propose immédiatement de coller le texte, en gardant le lien comme source.
