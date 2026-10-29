@@ -254,7 +254,7 @@ export async function mountStudio(view, id) {
         <div class="row field"><button class="chip ${m.showTitle ? 'on' : ''}" data-mt="showTitle">Titre</button><button class="chip ${m.showArtist ? 'on' : ''}" data-mt="showArtist">Artiste</button>
           <button class="chip ${m.showCover ? 'on' : ''}" data-mt="showCover">Pochette</button><button class="chip ${m.showSignature ? 'on' : ''}" data-mt="showSignature">Signature</button></div>
         <div class="row field">${seg('mpos', [['top', 'En haut'], ['bottom', 'En bas']], m.pos)}${seg('malign', [['left', 'Gauche'], ['center', 'Centre'], ['right', 'Droite']], m.align)}</div>
-        <div class="field row"><button class="chip ${m.band ? 'on' : ''}" id="m-band">Bandeau en bas</button>${m.band ? `<input type="color" id="m-bandc" value="${m.band}" aria-label="Couleur du bandeau"><label style="margin:0">Accent</label><input type="color" id="m-bacc" value="${m.bandAccent || '#cce988'}" aria-label="Couleur d'accent du bandeau">` : ''}</div>
+        <div class="field row"><button class="chip ${m.band ? 'on' : ''}" id="m-band">Bandeau en bas</button>${m.band ? `<button class="chip ${m.showLogo !== false ? 'on' : ''}" id="m-logo">Logo Verso</button>` : ''}${m.band ? `<input type="color" id="m-bandc" value="${m.band}" aria-label="Couleur du bandeau"><label style="margin:0">Accent</label><input type="color" id="m-bacc" value="${m.bandAccent || '#cce988'}" aria-label="Couleur d'accent du bandeau">` : ''}</div>
         ${m.band ? `<div class="field"><label>Disposition du bandeau</label>${seg('bstyle', [['duo', 'Titre + artiste'], ['ligne', 'Une ligne'], ['etiquette', 'Étiquette'], ['capitales', 'Capitales']], m.bandStyle || 'duo')}</div>
         <div class="grid2"><div class="field"><label for="m-font">Police du bandeau</label><select id="m-font">${FONTS.map(x => `<option value="${x.id}" ${x.id === (m.font || 'grotesk') ? 'selected' : ''}>${x.label}</option>`).join('')}</select></div>
           <div class="field"><label>Graisse</label>${(() => { const f = fontById(m.font || 'grotesk'); return f.weights.length > 1 ? seg('mweight', f.weights.map(w => [w, w >= 700 ? 'Gras' : 'Normal']), m.weight || Math.max(...f.weights)) : '<p class="small muted">Une seule graisse</p>'; })()}</div></div>` : ''}
@@ -332,6 +332,7 @@ export async function mountStudio(view, id) {
     on('#b-vgrad', 'onclick', () => { bg.veilMode = bg.veilMode === 'gradient' ? 'flat' : 'gradient'; change(); refreshPanel(); });
     on('#m-band', 'onclick', () => { m.band = m.band ? '' : '#000000'; if (m.band) m.color = '#ffffff'; change(); refreshPanel(); });
     on('#m-font', 'onchange', e => { m.font = e.target.value; m.weight = 0; ensureFonts({ ...st, font: m.font }).then(change); refreshPanel(); });
+    on('#m-logo', 'onclick', () => { m.showLogo = m.showLogo === false; change(); refreshPanel(); });
     on('#m-bacc', 'oninput', e => { m.bandAccent = e.target.value; change(); });
     on('#m-bandc', 'oninput', e => { m.band = e.target.value; change(); });
     on('#m-color', 'oninput', e => { m.color = e.target.value; change(); });

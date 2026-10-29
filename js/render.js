@@ -48,7 +48,7 @@ export function templatePreset(name) {
       // Image plein cadre, lignes sur bandes blanches, bandeau d'informations en bas.
       Object.assign(p, { font: 'inter', weight: 400, size: 54, color: '#0b0b0b', lineBg: '#ffffff', lineHeight: 1.6, posY: 1, margin: 0.055, accent: '#0b0b0b', hlMode: 'bold' });
       p.bg = { ...baseBg, kind: 'ambiance', ambiance: 'anis', seed: 3, color: '#141c12', texture: 'grain', textureAlpha: 0.16 };
-      p.meta = { ...baseMeta, showCover: false, band: '#0b0f0a', color: '#ffffff', size: 30, showSignature: true, bandStyle: 'duo', font: 'grotesk' };
+      p.meta = { ...baseMeta, showCover: false, band: '#0b0f0a', color: '#ffffff', size: 30, showSignature: false, showLogo: true, bandStyle: 'duo', font: 'grotesk' };
       break;
     case 'minimal':
       // Bandeaux derrière chaque ligne : la carte de paroles classique, sobre.
@@ -97,7 +97,16 @@ function fontString(style, size, bold) {
   return `${style.italic && (f.italic || f.system) ? 'italic ' : ''}${w} ${size}px ${fam}, system-ui, sans-serif`;
 }
 
+// Logo de l'application (fichier d'origine, non modifié), affiché dans le bandeau.
+let brandImg = null, brandLoading = null;
+export function loadBrand() {
+  if (brandImg || brandLoading) return brandLoading || Promise.resolve(brandImg);
+  brandLoading = new Promise(res => { const i = new Image(); i.onload = () => { brandImg = i; res(i); }; i.onerror = () => res(null); i.src = new URL('../icons/logo.png', import.meta.url).href; });
+  return brandLoading;
+}
+
 export async function ensureFonts(style) {
+  await loadBrand();
   if (!document.fonts) return;
   const f = fontById(style.font);
   const loads = [];
@@ -341,7 +350,8 @@ export function renderCard(canvas, card, imgs = {}, opts = {}) {
   let metaY = null;
   const sigH = meta.showSignature && meta.signature ? ms * 1.6 : 0;
   if (sigH && !meta.band) { if (meta.sigPos.startsWith('top')) top += sigH + 24; else bottom -= sigH + 24; }
-  const band = meta.band && (meta.showTitle || meta.showArtist || (meta.showSignature && meta.signature));
+  const showLogo = meta.band && meta.showLogo !== false && brandImg;
+  const band = meta.band && (meta.showTitle || meta.showArtist || (meta.showSignature && meta.signature) || showLogo);
   const bandH = band ? Math.max(150, ms * 5) : 0;
   if (band) bottom = H - bandH - 30;
   else if (metaH > 0) {
@@ -449,7 +459,8 @@ export function renderCard(canvas, card, imgs = {}, opts = {}) {
     const ink = layout === 'etiquette' ? '#0b0f0a' : metaColor;
     ctx.fillStyle = bandColor; ctx.fillRect(0, by, W, bandH);
     const title = meta.showTitle ? card.title || '' : '', artist = meta.showArtist ? card.artist || '' : '';
-    const maxLW = (sigH ? W * 0.62 : W - 2 * m);
+    const right = showLogo || sigH;
+    const maxLW = (right ? W * 0.6 : W - 2 * m);
     const cy = by + bandH / 2;
     ctx.fillStyle = ink; ctx.textAlign = 'left';
     if (layout === 'duo') {
@@ -467,8 +478,8 @@ export function renderCard(canvas, card, imgs = {}, opts = {}) {
       // Une seule ligne centrée : Titre — Artiste.
       const t = [title, artist].filter(Boolean).join('  —  ');
       ctx.font = `${mw} ${ms * 1.05}px ${fam}, Inter, sans-serif`;
-      ctx.textAlign = sigH ? 'left' : 'center';
-      ctx.fillText(t, sigH ? m : W / 2, cy + ms * 0.36, maxLW);
+      ctx.textAlign = right ? 'left' : 'center';
+      ctx.fillText(t, right ? m : W / 2, cy + ms * 0.36, maxLW);
     } else if (layout === 'etiquette') {
       // Bandeau de couleur d'accent, titre en capitales espacées.
       setSpacing(ctx, ms * 0.18);
@@ -492,7 +503,15 @@ export function renderCard(canvas, card, imgs = {}, opts = {}) {
       let ly = cy - (shown.length - 1) * fs * 0.6 + fs * 0.36;
       for (const r of shown) { ctx.fillText(r, m, ly, maxLW); ly += fs * 1.2; }
     }
-    if (sigH) {
+    if (showLogo) {
+      const lh = Math.min(bandH * 0.42, 72), lw = lh * brandImg.width / brandImg.height;
+      const lx = W - m - lw, ly = cy - lh / 2;
+      const n = parseInt((bandColor || '#000').slice(1, 7), 16);
+      const dark = 0.299 * (n >> 16) + 0.587 * (n >> 8 & 255) + 0.114 * (n & 255) < 150;
+      // Sur un bandeau sombre, le logo (texte foncé) est posé sur une pastille claire, sans être modifié.
+      if (dark) { ctx.fillStyle = '#ffffff'; roundRect(ctx, lx - lh * 0.12, ly - lh * 0.08, lw + lh * 0.24, lh * 1.16, lh * 0.3); ctx.fill(); }
+      ctx.drawImage(brandImg, lx, ly, lw, lh);
+    } else if (sigH) {
       ctx.fillStyle = ink;
       ctx.font = `500 ${ms * 1.35}px Caveat, cursive`;
       ctx.textAlign = 'right'; ctx.fillText(meta.signature, W - m, cy + ms * 0.42, W * 0.3);
