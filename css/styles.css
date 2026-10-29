@@ -220,3 +220,18 @@ img.cover { height: 52px; }
 .missing { color: var(--danger); font-size: .8rem; margin-top: 2px; }
 .seg { overflow-x: auto; scrollbar-width: none; }
 .seg button { white-space: nowrap; }
+
+/* Page artiste */
+.artist-head { display: flex; gap: 18px; align-items: center; margin-bottom: 22px; flex-wrap: wrap; }
+.artist-pic { width: 132px; height: 132px; border-radius: 50%; object-fit: cover; flex-shrink: 0; background: var(--surface-2); }
+.artist-pic.ph { display: grid; place-items: center; font-family: "Playfair Display", Georgia, serif; font-size: 4rem; color: var(--muted); }
+.bio { max-width: 68ch; max-height: 11.5em; overflow: hidden; position: relative; line-height: 1.6; }
+.bio.open { max-height: none; }
+.bio.long:not(.open)::after { content: ""; position: absolute; inset: auto 0 0 0; height: 3em; background: linear-gradient(transparent, var(--bg)); }
+.bio p { margin: 0 0 .8em; }
+.releases { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 14px; }
+.release a, .release button { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 0; color: inherit; text-decoration: none; min-height: 0; border-radius: 10px; }
+.release img { width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; border-radius: 10px; display: block; background: var(--surface-2); }
+.release .r-t { display: block; font-weight: 600; font-size: .9rem; margin-top: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.release .r-m { display: block; font-size: .78rem; color: var(--muted); }
+@media (min-width: 900px) { .artist-pic { width: 180px; height: 180px; } }

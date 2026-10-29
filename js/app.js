@@ -4,6 +4,7 @@ import { compressImage, lightLogoURL } from './render.js';
 import { mountStudio, newCard } from './studio.js';
 import { renderAlbumForm, renderAlbum, attachAlbum, liveAlbums, albumRow } from './albums.js';
 import { renderDiscography } from './discography.js';
+import { renderArtist, renderArtistByName, artistHref } from './artists.js';
 
 // --- Utilitaires ----------------------------------------------------------
 
@@ -128,6 +129,8 @@ const routes = [
   [/^\/ajouter\/discographie$/, renderDiscography, 'add'],
   [/^\/ajouter(?:\/(manuel|recherche|lien))?$/, renderAdd, 'add'],
   [/^\/album\/([\w]+)$/, renderAlbum, 'library'],
+  [/^\/artiste\/nom\/(.+)$/, renderArtistByName, 'library'],
+  [/^\/artiste\/(\d+)$/, renderArtist, 'library'],
   [/^\/album\/([\w]+)\/modifier$/, renderAlbumForm, 'library'],
   [/^\/morceau\/([\w]+)$/, renderSong, 'library'],
   [/^\/morceau\/([\w]+)\/modifier$/, renderEdit, 'library'],
@@ -238,7 +241,7 @@ function bindFavs() {
 
 // --- Bibliothèque ---------------------------------------------------------
 
-const lib = { q: '', sort: 'date', lang: '', collection: '', tag: '', fav: false, trash: false, albums: false, missing: false };
+const lib = { q: '', sort: 'date', lang: '', collection: '', tag: '', fav: false, trash: false, albums: false, missing: false, artists: false };
 
 async function renderLibrary() {
   const all = await songs();
@@ -251,6 +254,7 @@ async function renderLibrary() {
     <div class="page-head"><h1>Ma bibliothèque</h1><a class="btn primary" href="#/ajouter">＋ Ajouter</a></div>
     <div class="field"><input type="search" id="q" aria-label="Rechercher dans la bibliothèque" name="recherche" placeholder="Titre, artiste, album ou phrase des paroles…" value="${esc(lib.q)}" autocomplete="off"></div>
     <div class="chips" style="margin-bottom:8px">
+      <button class="chip ${lib.artists ? 'on' : ''}" id="f-artists">Artistes</button>
       <button class="chip ${lib.albums ? 'on' : ''}" id="f-albums">💿 Albums</button>
       <button class="chip ${lib.fav ? 'on' : ''}" id="f-fav">★ Favoris</button>
       ${live.some(x => !hasLyrics(x)) ? `<button class="chip ${lib.missing ? 'on' : ''}" id="f-missing">Paroles manquantes (${live.filter(x => !hasLyrics(x)).length})</button>` : ''}
@@ -269,6 +273,15 @@ async function renderLibrary() {
   const albums = await liveAlbums();
   const draw = () => {
     const q = norm(lib.q);
+    if (lib.artists) {
+      const counts = new Map();
+      for (const x of live) { const k = x.artist.trim(); if (k) counts.set(k, (counts.get(k) || 0) + 1); }
+      const list = [...counts].filter(([n]) => !q || norm(n).includes(q)).sort((a, b) => a[0].localeCompare(b[0], 'fr'));
+      $('#count').textContent = `${list.length} artiste${list.length > 1 ? 's' : ''}`;
+      $('#list').innerHTML = list.map(([n, c]) => `<li class="song"><a class="main" href="${artistHref(n)}"><span class="cover ph" style="--ph:${placeholderTint(n)};border-radius:50%" aria-hidden="true">“</span>
+        <div style="min-width:0"><div class="t">${esc(n)}</div><div class="a">${c} titre${c > 1 ? 's' : ''}</div></div></a></li>`).join('') || '<div class="empty">Aucun artiste.</div>';
+      return;
+    }
     if (lib.albums) {
       const list = albums.filter(a => !q || norm([a.title, a.artist, a.year].join(' ')).includes(q)).sort((a, b) => lib.sort === 'title' ? a.title.localeCompare(b.title, 'fr') : lib.sort === 'artist' ? a.artist.localeCompare(b.artist, 'fr') : b.createdAt - a.createdAt);
       $('#count').textContent = `${list.length} album${list.length > 1 ? 's' : ''}`;
@@ -321,7 +334,8 @@ async function renderLibrary() {
   if ($('#lang')) $('#lang').onchange = e => { lib.lang = e.target.value; draw(); };
   if ($('#tag')) $('#tag').onchange = e => { lib.tag = e.target.value; draw(); };
   $('#f-fav').onclick = () => { lib.fav = !lib.fav; lib.albums = false; renderLibrary(); };
-  $('#f-albums').onclick = () => { lib.albums = !lib.albums; renderLibrary(); };
+  $('#f-albums').onclick = () => { lib.albums = !lib.albums; lib.artists = false; renderLibrary(); };
+  $('#f-artists').onclick = () => { lib.artists = !lib.artists; lib.albums = false; renderLibrary(); };
   if ($('#f-missing')) $('#f-missing').onclick = () => { lib.missing = !lib.missing; lib.albums = false; renderLibrary(); };
   $('#f-trash').onclick = () => { lib.trash = !lib.trash; renderLibrary(); };
   $$('[data-col]').forEach(b => b.onclick = () => { lib.collection = lib.collection === b.dataset.col ? '' : b.dataset.col; renderLibrary(); });
@@ -516,7 +530,7 @@ async function renderSong(id) {
   view.innerHTML = `
     <div class="song-head">${coverHtml(s)}<div style="min-width:0">
       <h1 style="margin-bottom:4px">${esc(s.title)}</h1>
-      <div class="muted">${esc(s.artist)}${s.featuring ? ' feat. ' + esc(s.featuring) : ''}${s.album ? ' · ' + (s.albumId ? `<a href="#/album/${s.albumId}">💿 ${esc(s.album)}</a>` : esc(s.album)) : ''}</div>
+      <div class="muted"><a href="${artistHref(s.artist)}">${esc(s.artist)}</a>${s.featuring ? ' feat. ' + esc(s.featuring) : ''}${s.album ? ' · ' + (s.albumId ? `<a href="#/album/${s.albumId}">💿 ${esc(s.album)}</a>` : esc(s.album)) : ''}</div>
       <div class="row small muted" style="margin-top:6px">${s.collection ? `<span class="tag">${esc(s.collection)}</span>` : ''}${(s.tags || []).map(t => `<span class="tag">#${esc(t)}</span>`).join('')}${s.lang ? `<span>${esc(s.lang)}</span>` : ''}</div>
     </div></div>
     <div class="row" style="margin-bottom:14px">
@@ -660,7 +674,7 @@ async function renderSettings() {
   const est = navigator.storage && navigator.storage.estimate ? await navigator.storage.estimate().catch(() => null) : null;
   const persisted = navigator.storage && navigator.storage.persisted ? await navigator.storage.persisted().catch(() => false) : false;
   const counts = {};
-  for (const s of ['songs', 'albums', 'cards', 'passages', 'templates']) counts[s] = (await db.all(s)).length;
+  for (const s of ['songs', 'albums', 'artists', 'cards', 'passages', 'templates']) counts[s] = (await db.all(s)).length;
   const mb = b => (b / 1048576).toFixed(1).replace('.', ',') + ' Mo';
   view.innerHTML = `<h1>Réglages</h1>
     <section class="card-box"><h3>Apparence</h3><div class="seg" id="theme">${[['auto', 'Automatique'], ['dark', 'Sombre'], ['light', 'Clair']].map(([k, l]) => `<button data-t="${k}" class="${theme === k ? 'on' : ''}">${l}</button>`).join('')}</div>

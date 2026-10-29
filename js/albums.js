@@ -179,7 +179,7 @@ export async function renderAlbum(id) {
   view.innerHTML = `
     <div class="song-head">${albumCover(a)}<div style="min-width:0">
       <div class="small muted">Album</div><h1 style="margin-bottom:4px">${esc(a.title)}</h1>
-      <div class="muted">${esc(a.artist)}${a.year ? ' · ' + esc(a.year) : ''} · ${tracks.length} morceau${tracks.length > 1 ? 'x' : ''}</div></div></div>
+      <div class="muted"><a href="#/artiste/nom/${encodeURIComponent(a.artist)}">${esc(a.artist)}</a>${a.year ? ' · ' + esc(a.year) : ''} · ${tracks.length} morceau${tracks.length > 1 ? 'x' : ''}</div></div></div>
     <div class="row" style="margin-bottom:14px">
       <button class="primary" id="addsong">＋ Ajouter un morceau</button>
       <a class="btn" href="#/album/${id}/modifier">Modifier l'album</a>

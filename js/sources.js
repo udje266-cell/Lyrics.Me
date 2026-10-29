@@ -189,3 +189,42 @@ export async function findLyrics(title, artist, album, duration) {
   const best = ok.find(r => !duration || Math.abs((r.duration || 0) - duration) <= 3) || ok[0];
   return best ? toResult(best) : null;
 }
+
+export async function artistInfo(id) {
+  const a = await jsonp(`/artist/${id}`);
+  return { id: a.id, name: a.name, picture: a.picture_xl, thumb: a.picture_medium, fans: a.nb_fan, albums: a.nb_album, link: a.link };
+}
+
+// --- Biographie (Wikipédia) ------------------------------------------------
+//
+// API publique de Wikipédia : gratuite, sans clé, appels autorisés depuis un navigateur
+// (paramètre origin=*). Textes sous licence CC BY-SA : la source est toujours affichée.
+
+const MUSIC_RE = /chanteu|rappeu|musicien|groupe|artiste|compositeu|auteur-compositeu|chanteur|DJ|duo|singer|rapper|band|musician|producteur/i;
+
+async function wiki(lang, params) {
+  if (!navigator.onLine) throw new Error('Pas de connexion internet : biographie indisponible.');
+  const q = new URLSearchParams({ ...params, format: 'json', origin: '*', formatversion: '2' });
+  const res = await fetch(`https://${lang}.wikipedia.org/w/api.php?${q}`);
+  if (res.status === 429) throw new Error('Wikipédia est momentanément surchargé. Réessayez dans un instant.');
+  if (!res.ok) throw new Error(`Wikipédia a renvoyé une erreur (${res.status}).`);
+  return res.json();
+}
+
+// Cherche la page de l'artiste (français, puis anglais) et renvoie son introduction.
+export async function artistBio(name) {
+  for (const lang of ['fr', 'en']) {
+    const s = await wiki(lang, { action: 'query', list: 'search', srsearch: name, srlimit: 6 });
+    const hits = (s.query && s.query.search) || [];
+    const simple = t => simplify(t.replace(/\s*\(.*\)$/, ''));
+    const pick = hits.find(h => simple(h.title) === simplify(name) && MUSIC_RE.test(h.snippet + h.title))
+      || hits.find(h => simple(h.title) === simplify(name))
+      || hits.find(h => simplify(h.title).startsWith(simplify(name)) && MUSIC_RE.test(h.snippet));
+    if (!pick) continue;
+    const r = await wiki(lang, { action: 'query', prop: 'extracts|info', exintro: 1, explaintext: 1, inprop: 'url', redirects: 1, titles: pick.title });
+    const page = r.query && r.query.pages && r.query.pages[0];
+    if (!page || !page.extract || /homonymie|may refer to|peut désigner/i.test(page.extract.slice(0, 200))) continue;
+    return { text: page.extract.trim(), url: page.fullurl || `https://${lang}.wikipedia.org/wiki/${encodeURIComponent(page.title)}`, title: page.title, lang };
+  }
+  return null;
+}

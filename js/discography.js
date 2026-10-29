@@ -29,12 +29,16 @@ export async function renderDiscography() {
       if (!list.length) { out.innerHTML = '<div class="notice">Aucun artiste trouvé. Vérifiez l\'orthographe.</div>'; return; }
       out.innerHTML = `<p class="small muted">Choisissez l'artiste :</p>` + list.map((a, i) => `<button class="result row" data-a="${i}" style="gap:12px;display:flex">
         <img src="${esc(a.picture)}" alt="" width="52" height="52" style="border-radius:50%" loading="lazy"><span><b>${esc(a.name)}</b><br><span class="small muted">${a.albums} sortie(s) · ${a.fans.toLocaleString('fr-FR')} fans</span></span></button>`).join('');
-      $$('[data-a]', out).forEach(b => b.onclick = () => pickAlbums(list[+b.dataset.a]));
+      $$('[data-a]', out).forEach(b => b.onclick = () => go('#/artiste/' + list[+b.dataset.a].id));
     } catch (err) { out.innerHTML = `<div class="notice err">${esc(err.message)}</div>`; }
   };
+  // Venue de la page d'un artiste : on passe directement au choix des sorties.
+  let pre = null;
+  try { pre = JSON.parse(sessionStorage.getItem('verso-disco') || 'null'); sessionStorage.removeItem('verso-disco'); } catch {}
+  if (pre) { $('#d-q').value = pre.name; pickAlbums(pre, pre.only); }
 }
 
-async function pickAlbums(artist) {
+async function pickAlbums(artist, only = null) {
   const out = $('#dres');
   out.innerHTML = `<p class="muted">Chargement de la discographie de ${esc(artist.name)}…</p>`;
   let albums;
@@ -48,7 +52,7 @@ async function pickAlbums(artist) {
     <div id="d-list">${albums.map((a, i) => {
       const have = existing.has(norm(a.title) + '|' + norm(artist.name));
       return `<label class="row song" data-kind="${esc(a.type)}" style="cursor:pointer;margin:0;color:inherit">
-        <input type="checkbox" data-i="${i}" ${a.type !== 'compile' && !have ? 'checked' : ''} ${have ? 'disabled' : ''} style="width:22px;height:22px;accent-color:var(--accent)">
+        <input type="checkbox" data-i="${i}" ${!have && (only ? String(a.id) === String(only) : a.type !== 'compile') ? 'checked' : ''} ${have ? 'disabled' : ''} style="width:22px;height:22px;accent-color:var(--accent)">
         <img class="cover" src="${esc(a.thumb)}" alt="" width="52" height="52" loading="lazy">
         <span style="min-width:0;flex:1"><span class="t" style="display:block">${esc(a.title)}</span><span class="a">${TYPES[a.type] || a.type}${a.year ? ', ' + a.year : ''}${have ? ' — déjà dans la bibliothèque' : ''}</span></span></label>`;
     }).join('')}</div>
