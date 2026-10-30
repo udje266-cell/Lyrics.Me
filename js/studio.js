@@ -239,7 +239,8 @@ export async function mountStudio(view, id) {
       ${reg('posY', 'Position verticale du bloc (ou glissez sur l\'aperçu)', 0, 1, 0.01, () => st.posY, v => st.posY = v, v => v < 0.2 ? 'haut' : v > 0.8 ? 'bas' : 'milieu')}
       <div class="card-box"><h3>Mots mis en évidence</h3>
         <div class="field"><input id="t-hl" value="${esc((st.highlights || []).join(', '))}" placeholder="Mots séparés par des virgules"></div>
-        <div class="small muted" style="margin:-6px 0 10px">Ou touchez un mot : <span id="t-words"></span></div>
+        <div class="small muted" style="margin:-6px 0 4px">Le mot tapé ci-dessus est mis en évidence partout. Pour un seul endroit, touchez le mot dans le texte :</div>
+        <div class="hl-words" id="t-words"></div>
         <div class="row">${seg('hlMode', [['color', 'Couleur'], ['bold', 'Gras'], ['mark', 'Surligné']], st.hlMode)}<input type="color" id="t-accent" value="${st.accent}" aria-label="Couleur de mise en évidence">
           <button class="chip ${st.dimOthers ? 'on' : ''}" id="t-dim">Atténuer le reste</button></div></div>`;
   }
@@ -385,14 +386,27 @@ export async function mountStudio(view, id) {
     on('#t-hl', 'oninput', e => { st.highlights = e.target.value.split(',').map(s => s.trim()).filter(Boolean); change(); drawWords(); });
     const drawWords = () => {
       const box = p.querySelector('#t-words'); if (!box) return;
-      const words = [...new Set(card.excerpt.split(/\s+/).map(w => w.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '')).filter(w => w.length > 1))].slice(0, 60);
-      const hl = new Set((st.highlights || []).map(w => w.toLocaleLowerCase('fr')));
-      box.innerHTML = words.map(w => `<button class="chip ${hl.has(w.toLocaleLowerCase('fr')) ? 'on' : ''}" data-word="${esc(w)}" style="margin:2px">${esc(w)}</button>`).join('');
-      box.querySelectorAll('[data-word]').forEach(b => b.onclick = () => {
-        const w = b.dataset.word, lw = w.toLocaleLowerCase('fr');
-        const list = st.highlights || [];
-        st.highlights = list.some(x => x.toLocaleLowerCase('fr') === lw) ? list.filter(x => x.toLocaleLowerCase('fr') !== lw) : [...list, w];
-        p.querySelector('#t-hl').value = st.highlights.join(', ');
+      const all = new Set((st.highlights || []).map(w => w.toLocaleLowerCase('fr')));
+      const strip = w => w.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '').toLocaleLowerCase('fr');
+      let i = 0;
+      box.innerHTML = card.excerpt.split('\n').map(line => line.split(/\s+/).filter(Boolean).map(t => {
+        const k = i++;
+        const on = all.has(strip(t)) || (st.hlPos || []).some(x => x.i === k && x.w === t);
+        return `<button class="chip ${on ? 'on' : ''}" data-pos="${k}" aria-pressed="${on}">${esc(t)}</button>`;
+      }).join('')).join('<br>');
+      box.querySelectorAll('[data-pos]').forEach(b => b.onclick = () => {
+        const k = +b.dataset.pos, t = b.textContent;
+        if (all.has(strip(t))) {
+          // Mot déjà mis en évidence partout : on ne garde que les autres endroits.
+          let j = 0; const others = [];
+          for (const tok of card.excerpt.split(/\s+/).filter(Boolean)) { if (j !== k && strip(tok) === strip(t)) others.push({ i: j, w: tok }); j++; }
+          st.highlights = st.highlights.filter(x => x.toLocaleLowerCase('fr') !== strip(t));
+          st.hlPos = [...(st.hlPos || []), ...others];
+          p.querySelector('#t-hl').value = st.highlights.join(', ');
+        } else {
+          const list = st.hlPos || [];
+          st.hlPos = list.some(x => x.i === k) ? list.filter(x => x.i !== k) : [...list, { i: k, w: t }];
+        }
         change(); drawWords();
       });
     };

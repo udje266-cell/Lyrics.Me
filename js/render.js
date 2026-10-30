@@ -145,12 +145,15 @@ export async function ensureFonts(style) {
 function layoutText(ctx, card, size, maxW) {
   const st = card.style;
   const hlSet = new Set((st.highlights || []).map(norm).filter(Boolean));
+  // Mots touchés un par un : position dans l'extrait + mot (ignoré si le texte a changé à cet endroit).
+  const hlPos = new Map((st.hlPos || []).map(x => [x.i, norm(x.w)]));
+  let idx = 0;
   const text = st.uppercase ? card.excerpt.toLocaleUpperCase('fr') : card.excerpt;
   const lines = [];
   let tooWide = false;
   const space = (() => { ctx.font = fontString(st, size, false); return ctx.measureText(' ').width; })();
   for (const para of text.split('\n')) {
-    const words = para.split(/\s+/).filter(Boolean).map(t => ({ t, hl: hlSet.has(norm(t)) }));
+    const words = para.split(/\s+/).filter(Boolean).map(t => { const i = idx++; return { t, hl: hlSet.has(norm(t)) || hlPos.get(i) === norm(t) }; });
     if (!words.length) { lines.push({ words: [], width: 0 }); continue; }
     let cur = [], curW = 0;
     for (const w of words) {
@@ -430,7 +433,7 @@ export function renderCard(canvas, card, imgs = {}, opts = {}) {
   const { L, h } = cur;
   let y = top + Math.max(0, regionH - h) * st.posY;
   const hlColor = st.accent;
-  const hasHl = (st.highlights || []).length > 0;
+  const hasHl = (st.highlights || []).length > 0 || (st.hlPos || []).length > 0;
   // Carte animée (export vidéo) : opts.anim = { mode: 'word' | 'line' | 'fade', p: 0 → 1 }.
   const A = opts.anim;
   const N = L.lines.reduce((n, l) => n + l.words.length, 0) || 1;

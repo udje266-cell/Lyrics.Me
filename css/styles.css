@@ -402,3 +402,4 @@ body.chat-mode #view { padding: 0; max-width: 720px; }
 .nav-dot { position: absolute; top: 2px; left: calc(50% + 6px); min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: #e5484d; color: #fff; font-size: .65rem; font-weight: 700; display: grid; place-items: center; line-height: 1; }
 .so-prof { flex: none; line-height: 0; }
 .chat-who { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+.hl-words { line-height: 2.1; margin-bottom: 10px; } .hl-words .chip { margin: 2px; padding: 4px 10px; min-height: 32px; }
