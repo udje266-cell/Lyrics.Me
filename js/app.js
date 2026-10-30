@@ -143,6 +143,7 @@ if (window.visualViewport) {
   const kb = () => {
     const vv = window.visualViewport;
     const h = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+    if (h <= 80 && document.documentElement.classList.contains('kb-guess')) return;
     document.documentElement.style.setProperty('--kb', h + 'px');
     document.documentElement.classList.toggle('kb-open', h > 80);
     const a = document.activeElement;
@@ -150,6 +151,32 @@ if (window.visualViewport) {
   };
   visualViewport.addEventListener('resize', kb);
   visualViewport.addEventListener('scroll', kb);
+}
+// Dans l'APK, le système ne signale parfois pas du tout le clavier (ni redimensionnement,
+// ni zone visible réduite). On réserve alors une hauteur de clavier type dès qu'une zone
+// de saisie du bas est active.
+if (android) {
+  const BOTTOM = '.chat-bar input, .post-form input';
+  let full = window.innerHeight;
+  window.addEventListener('resize', () => { if (!document.activeElement || !document.activeElement.matches || !document.activeElement.matches(BOTTOM)) full = Math.max(full, window.innerHeight); });
+  document.addEventListener('focusin', e => {
+    if (!e.target.matches || !e.target.matches(BOTTOM)) return;
+    setTimeout(() => {
+      const vv = window.visualViewport;
+      if (window.innerHeight < full - 80) return; // la page a été réduite : rien à faire
+      if (vv && window.innerHeight - vv.height > 80) return; // le vrai clavier est déjà pris en compte
+      const h = Math.round(window.innerHeight * 0.42);
+      document.documentElement.style.setProperty('--kb', h + 'px');
+      document.documentElement.classList.add('kb-open', 'kb-guess');
+      e.target.scrollIntoView({ block: 'nearest' });
+    }, 400);
+  });
+  document.addEventListener('focusout', e => {
+    if (!e.target.matches || !e.target.matches(BOTTOM)) return;
+    setTimeout(() => { if (!document.activeElement || !document.activeElement.matches(BOTTOM)) {
+      document.documentElement.style.setProperty('--kb', '0px'); document.documentElement.classList.remove('kb-open', 'kb-guess');
+    } }, 150);
+  });
 }
 // APK 2.7+ : Android réserve lui-même la place des barres système.
 if (/VersoInsets/.test(navigator.userAgent)) document.documentElement.classList.add('native-insets');
@@ -1025,7 +1052,7 @@ async function renderSettings() {
       ${row('Google', 'Bouton « Voir sur Google » sur les titres sans paroles : copiez-les, Verso propose de les coller au retour.', '')}`)}
 
     ${group('ℹ️', 'Application', `
-      ${row('Version', android && android.webBuild ? `Verso ${android.webBuild()} · les mises à jour s'installent automatiquement` : 'Version web', '')}
+      ${row('Version', android && android.webBuild ? `Verso ${android.webBuild()} · application Android ${/VersoInsets/.test(navigator.userAgent) ? '2.7 ou plus récente' : 'antérieure à 2.7 (installez la dernière pour le clavier et la barre du haut)'} · les mises à jour s'installent automatiquement` : 'Version web', '')}
       ${android ? '' : row('Application Android', 'Notifications, détection de la musique et enregistrement dans la galerie.', '<a class="btn primary small" href="installer.html">Télécharger</a>')}
       <button id="install" hidden class="primary">Installer Verso</button>
       ${row('Verso', 'Application personnelle de paroles et de cartes. Sans publicité.', '')}`)}

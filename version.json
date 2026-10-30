@@ -1,12 +1,12 @@
 {
- "build": 39,
+ "build": 40,
  "minApk": 16,
  "files": {
   "index.html": "edcc0392859bcb87",
   "manifest.webmanifest": "bd75cb6960ba2328",
-  "css/styles.css": "b116c1c5d20a2739",
+  "css/styles.css": "76588b8f0fb47b5b",
   "css/fonts.css": "1d3ac62be2d2fcd7",
-  "js/app.js": "8f1cdc94a855e657",
+  "js/app.js": "19afd9bcd981aa55",
   "js/db.js": "5581af03859c7e07",
   "js/render.js": "d056038dfe3d971f",
   "js/sources.js": "4e7697e2574b3637",
