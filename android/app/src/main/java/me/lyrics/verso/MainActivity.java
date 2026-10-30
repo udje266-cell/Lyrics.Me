@@ -315,6 +315,17 @@ public class MainActivity extends Activity {
             return flat != null && flat.contains(getPackageName());
         }
 
+        /** Texte du presse-papiers (paroles copiées depuis Google), lu au retour dans Verso. */
+        @JavascriptInterface
+        public String readClipboard() {
+            try {
+                android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+                if (cm == null || !cm.hasPrimaryClip() || cm.getPrimaryClip().getItemCount() == 0) return "";
+                CharSequence t = cm.getPrimaryClip().getItemAt(0).coerceToText(MainActivity.this);
+                return t == null ? "" : t.toString();
+            } catch (Exception e) { return ""; }
+        }
+
         /** Notifications de Verso autorisées (Android 13+ : permission à accorder). */
         @JavascriptInterface
         public boolean notificationsAllowed() {

@@ -104,6 +104,35 @@ const coverHtml = (s, cls = 'cover') => s.cover
 const PH_TINTS = ['#4f7a2a', '#0f5c6e', '#b23a7a', '#8a1f12', '#123a7a', '#6b4b2a', '#4a1f6b'];
 function placeholderTint(str) { let h = 0; for (const c of String(str)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return PH_TINTS[h % PH_TINTS.length]; }
 
+// Paroles proposées par Google : Google ne permet pas aux applications de les lire. Verso
+// ouvre la bonne recherche ; vous copiez les paroles, et Verso propose de les coller au retour.
+export const googleLyricsUrl = (title, artist) => 'https://www.google.com/search?q=' + encodeURIComponent(`${title} ${artist || ''} paroles`.trim());
+async function readClipboard() {
+  if (android && android.readClipboard) return android.readClipboard() || '';
+  try { return await navigator.clipboard.readText(); } catch { return ''; }
+}
+// Ouvre Google puis, au retour dans Verso, propose le texte copié. Renvoie les paroles validées ou null.
+function lyricsFromGoogle(title, artist) {
+  const url = googleLyricsUrl(title, artist);
+  if (android) location.href = url; else window.open(url, '_blank', 'noopener');
+  return new Promise(resolve => {
+    const back = async () => {
+      if (document.hidden) return;
+      document.removeEventListener('visibilitychange', back);
+      await new Promise(r => setTimeout(r, 400));
+      const text = (await readClipboard()).replace(/\r\n?/g, '\n').trim();
+      const ok = text.split('\n').length >= 3;
+      const v = await openDialog(`<form method="dialog" class="stack"><h3>Paroles copiées depuis Google</h3>
+        ${ok ? `<p class="small muted">Vérifiez qu'il s'agit bien de « ${esc(title)} » avant de les ajouter.</p><textarea id="g-ly" style="min-height:40dvh">${esc(text)}</textarea>`
+          : `<p>Aucunes paroles trouvées dans le presse-papiers. Sur Google, appuyez longuement sur les paroles, choisissez « Tout sélectionner » puis « Copier », et revenez dans Verso.</p><textarea id="g-ly" style="min-height:30dvh" placeholder="Ou collez-les ici…"></textarea>`}
+        <div class="row" style="justify-content:flex-end"><button value="no">Annuler</button><button value="ok" class="primary">Ajouter ces paroles</button></div></form>`);
+      const val = v === 'ok' ? document.getElementById('g-ly').value.replace(/\r\n?/g, '\n').replace(/\s+$/, '') : '';
+      resolve(val.trim() ? val : null);
+    };
+    setTimeout(() => document.addEventListener('visibilitychange', back), 300);
+  });
+}
+
 // Dans l'application Android (APK), l'enregistrement et le partage passent par le téléphone.
 export const android = window.VersoAndroid || null;
 if (android) document.documentElement.classList.add('is-app');
@@ -531,7 +560,8 @@ async function songForm(song, { submitLabel, intro = '' } = {}) {
     </div>
     <div>
       <div class="row spread"><label for="f-lyrics">Paroles *</label>
-        <label class="btn ghost small" style="margin:0;color:var(--accent)">Importer un .txt<input type="file" id="f-txt" accept=".txt,text/plain" hidden></label></div>
+        <span class="row" style="gap:4px"><button type="button" class="ghost small" id="f-google" style="color:var(--accent)">Voir sur Google</button>
+        <label class="btn ghost small" style="margin:0;color:var(--accent)">Importer un .txt<input type="file" id="f-txt" accept=".txt,text/plain" hidden></label></span></div>
       <textarea id="f-lyrics" ${song.missingLyrics ? '' : 'required'} placeholder="[Couplet 1]&#10;Collez les paroles ici…&#10;&#10;[Refrain]&#10;…">${esc(song.lyrics)}</textarea>
       <div class="small muted">Les paragraphes, retours à la ligne et indications comme [Refrain] sont conservés tels quels.</div>
     </div>
@@ -581,6 +611,14 @@ function bindSongForm(song, onSaved) {
     const f = e.target.files[0]; if (!f) return;
     try { cover = await compressImage(f, 1200); $('#cover-prev').innerHTML = `<img class="cover" src="${URL.createObjectURL(cover)}" alt="">`; }
     catch (err) { toast(err.message, { err: true }); }
+  };
+  $('#f-google').onclick = async () => {
+    const t = $('#f-title').value.trim(); if (!t) { toast('Saisissez d\'abord le titre.', { err: true }); return; }
+    const text = await lyricsFromGoogle(t, $('#f-artist').value.trim());
+    if (!text) return;
+    $('#f-lyrics').value = text; $('#f-lyrics').dispatchEvent(new Event('input', { bubbles: true }));
+    if (!$('#f-src').value.trim()) $('#f-src').value = googleLyricsUrl(t, $('#f-artist').value.trim());
+    toast('Paroles collées : vérifiez-les puis enregistrez.');
   };
   $('#f-findcover').onclick = async () => {
     const r = await pickArtwork($('#f-title').value.trim(), $('#f-artist').value.trim());
@@ -716,7 +754,7 @@ async function renderSong(id) {
     <div class="size-pop" id="sizepop" hidden><button class="icon-btn" id="minus" aria-label="Réduire le texte">A−</button><input type="range" id="sizer" min="0.9" max="2" step="0.05" value="${size}" aria-label="Taille du texte"><button class="icon-btn" id="plus" aria-label="Agrandir le texte">A+</button></div>
     ${s.note ? `<div class="notice" style="margin-bottom:16px">${esc(s.note)}</div>` : ''}
     ${hasLyrics(s) ? '' : `<div class="notice field"><b>(paroles manquantes)</b><br>Ce titre n'a pas encore de paroles.
-      <div class="row" style="margin-top:10px"><a class="btn primary" href="#/morceau/${id}/modifier">Ajouter les paroles</a><button id="findly">Chercher sur LRCLIB</button></div></div>`}
+      <div class="row" style="margin-top:10px"><a class="btn primary" href="#/morceau/${id}/modifier">Ajouter les paroles</a><button id="findgg">Voir sur Google</button><button id="findly">Chercher sur LRCLIB</button></div></div>`}
     ${hasLyrics(s) && hint ? '<p class="sel-hint" id="selhint">Appuyez longuement sur un mot, puis étirez la sélection avec les poignées pour créer une carte.</p>' : ''}
     <article class="lyrics" id="lyrics" aria-label="Paroles" style="--lsize:${size}rem">${lines.map((l, i) => !l.trim() ? '<div class="gap" aria-hidden="true"></div>' : SECTION_RE.test(l) ? `<div class="sec">${esc(l.trim().replace(/^\[|\]$/g, ''))}</div>` : `<div class="ln" data-i="${i}">${esc(l)}</div>`).join('')}</article>
     ${s.sourceName ? `<p class="small muted lyrics-src">Paroles : ${esc(s.sourceName)}</p>` : ''}
@@ -728,6 +766,12 @@ async function renderSong(id) {
       <div class="row"><button class="primary" style="flex:1" id="mkcard">Créer une carte</button><button id="keep">Garder le passage</button></div>
     </div>`;
 
+  if ($('#findgg')) $('#findgg').onclick = async () => {
+    const text = await lyricsFromGoogle(s.title, s.artist);
+    if (!text) return;
+    Object.assign(s, { lyrics: text, missingLyrics: false, sourceName: 'Google (copié par vous)', sourceUrl: s.sourceUrl || googleLyricsUrl(s.title, s.artist), updatedAt: Date.now() });
+    await safe(() => db.put('songs', s)); toast('Paroles ajoutées'); renderSong(id);
+  };
   if ($('#findly')) $('#findly').onclick = async () => {
     const b = $('#findly'); b.disabled = true; b.textContent = 'Recherche…';
     try {
