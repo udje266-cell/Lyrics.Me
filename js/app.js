@@ -9,6 +9,7 @@ import { renderProfile } from './profile.js';
 import { renderSearch } from './search.js';
 import { renderAccount, renderFriends, renderInbox, renderChat, renderUser, startSocialAlerts } from './social.js';
 import { installSharedLyrics } from './shared-lyrics.js';
+import { installPosts, renderPost } from './posts.js';
 import { loadNews, loadCharts, newsAvailable } from './feeds.js';
 
 // --- Utilitaires ----------------------------------------------------------
@@ -136,6 +137,8 @@ function lyricsFromGoogle(title, artist) {
 // Dans l'application Android (APK), l'enregistrement et le partage passent par le téléphone.
 export const android = window.VersoAndroid || null;
 if (android) document.documentElement.classList.add('is-app');
+// APK 2.7+ : Android réserve lui-même la place des barres système.
+if (/VersoInsets/.test(navigator.userAgent)) document.documentElement.classList.add('native-insets');
 // Bouton retour du téléphone (appelé par l'APK) : ferme d'abord ce qui est ouvert,
 // puis revient à l'écran précédent ; depuis l'accueil, l'application se ferme.
 // Mise à jour à distance (APK) : nouvelle version téléchargée en arrière-plan.
@@ -196,6 +199,7 @@ const routes = [
   [/^\/compte$/, renderAccount, 'profile'],
   [/^\/amis$/, renderFriends, 'profile'],
   [/^\/u\/([\w-]+)$/, renderUser, 'profile'],
+  [/^\/post\/([\w-]+)$/, renderPost, 'profile'],
   [/^\/messages$/, renderInbox, 'profile'],
   [/^\/discussion\/([\w-]+_[\w-]+)$/, renderChat, 'profile'],
   [/^\/recherche$/, renderSearch, 'search'],
@@ -957,27 +961,87 @@ async function renderSettings() {
   const counts = {};
   for (const s of ['songs', 'albums', 'artists', 'cards', 'passages', 'templates']) counts[s] = (await db.all(s)).length;
   const mb = b => (b / 1048576).toFixed(1).replace('.', ',') + ' Mo';
-  view.innerHTML = `<h1>Réglages</h1>
-    <section class="card-box"><h3>Apparence</h3><div class="seg" id="theme">${[['auto', 'Automatique'], ['dark', 'Sombre'], ['light', 'Clair']].map(([k, l]) => `<button data-t="${k}" class="${theme === k ? 'on' : ''}">${l}</button>`).join('')}</div>
-      <div class="field" style="margin-top:14px"><label for="sig">Signature par défaut sur les cartes</label><input id="sig" value="${esc(signature)}" placeholder="Votre pseudonyme"></div></section>
-    <section class="card-box"><h3>Mes données</h3>
-      <div class="notice">Vos données sont enregistrées <b>uniquement sur cet appareil</b>, dans ce navigateur. Elles ne sont envoyées nulle part et ne sont <b>pas synchronisées</b> avec vos autres appareils. Exportez régulièrement une sauvegarde pour ne rien perdre (changement de téléphone, effacement des données du navigateur).</div>
-      <p class="small">${counts.songs} morceau(x) · ${counts.albums} album(s) · ${counts.cards} carte(s) · ${counts.passages} passage(s) · ${counts.templates} modèle(s) personnel(s)${est ? `<br>Espace utilisé : ${mb(est.usage || 0)}${est.quota ? ' sur ' + mb(est.quota) + ' disponibles' : ''}` : ''}<br>
-      Stockage protégé contre le nettoyage automatique : <b>${persisted ? 'oui' : 'non'}</b> ${persisted ? '' : '<button class="chip" id="persist">Demander la protection</button>'}</p>
-      <div class="row"><button class="primary" id="backup">Exporter une sauvegarde</button><label class="btn" style="margin:0;color:var(--text)">Restaurer une sauvegarde<input type="file" id="restore" accept=".json,application/json" hidden></label></div>
-      <p class="small muted">La sauvegarde (.json) contient les albums, paroles, notes, favoris, collections, passages, cartes, leurs réglages et leurs images. La restauration fusionne sans créer de doublons : un élément déjà présent n'est remplacé que par une version plus récente.</p></section>
-    <section class="card-box"><h3>Sources de paroles</h3>
-      <p class="small"><b>LRCLIB</b> (lrclib.net) — active. Gratuite, sans compte ni clé. Fournit les paroles complètes contribuées par sa communauté : à vérifier avant ajout. Recherche par titre et artiste, import depuis un lien LRCLIB.</p>
-      <p class="small muted">Genius, Musixmatch et Spotify ne sont pas branchés : l'API publique de Genius ne fournit pas les paroles ; Musixmatch ne donne gratuitement que 30 % du texte et exige une clé et un contrat commercial pour le texte complet. Toute autre page web : collez le texte, le lien est conservé comme source.</p></section>
-    <section class="card-box"><h3>Installer l'application</h3>${android ? '' : '<p class="small"><a class="btn primary" href="installer.html">Télécharger l\'application Android (APK)</a></p>'}<p class="small">Sur Android (Chrome) : menu ⋮ puis « Installer l'application » ou « Ajouter à l'écran d'accueil ». Sur ordinateur : icône d'installation dans la barre d'adresse.</p>
-      <button id="install" hidden class="primary">Installer Verso</button></section>
-    <p class="small muted" style="text-align:center">Verso · application personnelle, sans publicité. Compte facultatif (amis et messages).${android && android.webBuild ? ` · version ${android.webBuild()}` : ""}</p>`;
+  const { currentUser } = await import('./social.js');
+  const user = await currentUser();
+  const prof = (await db.setting('profile', null)) || {};
+  const vis = await db.setting('visibility', 'friends');
+  const autoPub = await db.setting('autoPublish', true);
+  const shareLy = await db.setting('shareLyrics', true);
+  const lastBackup = await db.setting('lastBackup', 0);
+  const npOn = android && android.nowPlayingAllowed ? android.nowPlayingAllowed() : null;
+  const notifOn = android && android.notificationsAllowed ? android.notificationsAllowed() : null;
+  const sw = (id, on, label) => `<button class="switch" role="switch" id="${id}" aria-checked="${on}" aria-label="${esc(label)}"><span></span></button>`;
+  const row = (title, desc, control) => `<div class="set-row"><div class="set-txt"><b>${title}</b>${desc ? `<span>${desc}</span>` : ''}</div>${control ? `<div class="set-ctl">${control}</div>` : ''}</div>`;
+  const group = (icon, title, rows) => `<section class="set-group"><h2><span aria-hidden="true">${icon}</span>${title}</h2><div class="set-card">${rows}</div></section>`;
+  const status = on => on ? '<span class="set-ok">Activé</span>' : '<span class="set-off">Désactivé</span>';
+
+  view.innerHTML = `<div class="page-head"><a class="icon-btn ghost" href="#/profil" aria-label="Retour">←</a><h1 style="flex:1">Réglages</h1></div>
+    <div class="set-account">${user
+      ? `<a class="so-link set-me" href="#/profil">${prof.avatar ? `<img class="so-av" src="${blobUrl('avatar' + (prof.updatedAt || 0), prof.avatar)}" alt="" width="52" height="52" style="width:52px;height:52px">` : `<span class="so-av ph" style="width:52px;height:52px">${esc((prof.name || prof.handle || 'V')[0].toUpperCase())}</span>`}
+          <div class="so-who"><b>${esc(prof.name || '@' + prof.handle)}</b><span class="small muted">@${esc(prof.handle || '')} · ${esc(user.email || '')}</span></div><span class="muted" aria-hidden="true">›</span></a>`
+      : `<div class="set-me"><span class="so-av ph" style="width:52px;height:52px">V</span><div class="so-who"><b>Pas de compte Verso</b><span class="small muted">Créez-en un pour vos amis, messages et publications.</span></div></div>
+         <a class="btn primary" href="#/compte" style="margin-top:12px">Créer un compte ou se connecter</a>`}</div>
+
+    ${user ? group('🔒', 'Confidentialité', `
+      ${row('Qui peut voir mes créations', 'Vos amis voient toujours vos créations publiées. En « Tout le monde », n\'importe quel compte Verso qui visite votre profil peut aussi les voir, les aimer et les commenter.',
+        `<div class="seg" id="vis">${[['friends', 'Amis'], ['public', 'Tout le monde']].map(([k, l]) => `<button data-vis="${k}" class="${vis === k ? 'on' : ''}">${l}</button>`).join('')}</div>`)}
+      ${row('Publier mes cartes automatiquement', 'Chaque carte enregistrée est publiée sur votre profil. Une carte peut être rendue privée depuis le studio (onglet Format).', sw('sw-pub', autoPub, 'Publier automatiquement'))}
+      ${row('Partager mes paroles avec la communauté', 'Les paroles que vous ajoutez complètent les titres « paroles manquantes » des autres utilisateurs.', sw('sw-ly', shareLy, 'Partager mes paroles'))}
+      <div class="set-row set-actions"><button id="pub-all">Publier toutes mes cartes</button><button class="ghost danger" id="unpub-all">Retirer tout de mon profil</button></div>`) : ''}
+
+    ${android ? group('🔔', 'Notifications', `
+      ${row('Notifications de Verso', 'Demandes d\'ami, messages, j\'aime, commentaires et musique détectée.', notifOn ? status(true) : '<button class="primary small" id="n-notif">Activer</button>')}
+      ${row('Détection de la musique en cours', 'Spotify, YouTube Music, Deezer… : Verso affiche le titre et ses paroles. Accélère aussi la réception des messages (toutes les 3 min).', npOn ? `${status(true)} <button class="ghost small" id="n-np">Gérer</button>` : '<button class="primary small" id="n-np">Activer</button>')}
+      ${row('Fonctionnement en arrière-plan', 'Sur Samsung (One UI) : Paramètres → Applications → Verso → Batterie → « Non restreinte », sinon les notifications peuvent s\'arrêter.', '')}`) : ''}
+
+    ${group('🎨', 'Apparence', `
+      ${row('Thème', '', `<div class="seg" id="theme">${[['auto', 'Auto'], ['dark', 'Sombre'], ['light', 'Clair']].map(([k, l]) => `<button data-t="${k}" class="${theme === k ? 'on' : ''}">${l}</button>`).join('')}</div>`)}
+      <div class="set-row set-col"><div class="set-txt"><b>Signature par défaut sur les cartes</b><span>Affichée en bas des cartes (modifiable dans le studio).</span></div><input id="sig" value="${esc(signature)}" placeholder="@monpseudo"></div>`)}
+
+    ${group('💾', 'Bibliothèque et sauvegarde', `
+      <div class="set-stats">${[[counts.songs, 'Morceaux'], [counts.albums, 'Albums'], [counts.cards, 'Cartes'], [counts.passages, 'Passages']].map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join('')}</div>
+      ${row('Stockage sur ce téléphone', `${est ? mb(est.usage || 0) + ' utilisés' : ''}${persisted ? ' · protégé contre le nettoyage automatique' : ''}`, persisted ? '' : '<button class="ghost small" id="persist">Protéger</button>')}
+      ${row('Sauvegarde', `Bibliothèque, cartes et images dans un fichier .json. ${lastBackup ? 'Dernière : ' + fmtDate(lastBackup) : '<b>Aucune sauvegarde pour l\'instant.</b>'}`, '')}
+      <div class="set-row set-actions"><button class="primary" id="backup">Exporter</button><label class="btn" style="margin:0;color:var(--text)">Restaurer<input type="file" id="restore" accept=".json,application/json" hidden></label></div>
+      <p class="small muted set-note">Votre bibliothèque reste sur ce téléphone. En ligne : votre profil public, vos amis, messages, cartes publiées et paroles partagées (si activé). La restauration fusionne sans créer de doublons.</p>`)}
+
+    ${group('🎵', 'Sources de paroles', `
+      ${row('Communauté Verso', 'Paroles ajoutées par les utilisateurs de Verso (avec un compte).', status(!!user))}
+      ${row('LRCLIB', 'Base de paroles libre et gratuite, contribuée par sa communauté : vérifiez avant d\'ajouter.', status(true))}
+      ${row('Google', 'Bouton « Voir sur Google » sur les titres sans paroles : copiez-les, Verso propose de les coller au retour.', '')}`)}
+
+    ${group('ℹ️', 'Application', `
+      ${row('Version', android && android.webBuild ? `Verso ${android.webBuild()} · les mises à jour s'installent automatiquement` : 'Version web', '')}
+      ${android ? '' : row('Application Android', 'Notifications, détection de la musique et enregistrement dans la galerie.', '<a class="btn primary small" href="installer.html">Télécharger</a>')}
+      <button id="install" hidden class="primary">Installer Verso</button>
+      ${row('Verso', 'Application personnelle de paroles et de cartes. Sans publicité.', '')}`)}
+    ${user ? '<button class="ghost danger set-logout" id="logout">Se déconnecter</button>' : ''}`;
+
   $$('[data-t]').forEach(b => b.onclick = () => {
     try { localStorage.setItem('verso-theme', b.dataset.t); } catch {}
     if (b.dataset.t === 'auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = b.dataset.t;
     $$('[data-t]').forEach(x => x.classList.toggle('on', x === b));
     applyLogo();
   });
+  const toggle = (id, key, onMsg, offMsg, after) => { const b = $(id); if (!b) return; b.onclick = async () => {
+    const on = b.getAttribute('aria-checked') !== 'true'; b.setAttribute('aria-checked', on);
+    await db.setSetting(key, on); toast(on ? onMsg : offMsg); if (after) after(on);
+  }; };
+  toggle('#sw-pub', 'autoPublish', 'Vos cartes enregistrées seront publiées.', 'Publication automatique désactivée.', on => { if (on) import('./posts.js').then(m => m.publishAll()); });
+  toggle('#sw-ly', 'shareLyrics', 'Vos paroles seront partagées.', 'Vos paroles ne seront plus partagées.');
+  $$('[data-vis]').forEach(b => b.onclick = async () => {
+    await db.setSetting('visibility', b.dataset.vis);
+    $$('[data-vis]').forEach(x => x.classList.toggle('on', x === b));
+    try { const { syncProfile } = await import('./social.js'); await syncProfile((await db.setting('profile', null)) || {}); toast(b.dataset.vis === 'public' ? 'Vos créations sont visibles par tous les comptes Verso.' : 'Vos créations sont visibles par vos amis uniquement.'); }
+    catch (e) { toast(e.message, { err: true }); }
+  });
+  if ($('#pub-all')) $('#pub-all').onclick = async e => { e.target.disabled = true; e.target.textContent = 'Publication…'; const n = await (await import('./posts.js')).publishAll(); toast(n ? `${n} carte(s) publiée(s)` : 'Tout est déjà publié'); e.target.disabled = false; e.target.textContent = 'Publier toutes mes cartes'; };
+  if ($('#unpub-all')) $('#unpub-all').onclick = async () => {
+    if (!(await confirmDialog('Retirer toutes vos créations de votre profil ? Elles restent sur ce téléphone. Désactivez aussi la publication automatique pour qu\'elles ne reviennent pas.', 'Tout retirer', true))) return;
+    await (await import('./posts.js')).unpublishAll(); await db.setSetting('autoPublish', false); toast('Créations retirées de votre profil'); renderSettings();
+  };
+  if ($('#n-notif')) $('#n-notif').onclick = () => android.requestNotifications();
+  if ($('#n-np')) $('#n-np').onclick = () => android.openNowPlayingSettings();
   $('#sig').onchange = e => safe(() => db.setSetting('signature', e.target.value.trim())).then(() => toast('Signature enregistrée'));
   if ($('#persist')) $('#persist').onclick = async () => { const ok = await navigator.storage.persist(); toast(ok ? 'Stockage protégé' : 'Le navigateur a refusé (installez l\'application pour améliorer la protection).', { err: !ok }); renderSettings(); };
   $('#backup').onclick = async () => {
@@ -996,7 +1060,15 @@ async function renderSettings() {
       renderSettings();
     } catch (err) { toast(err.message, { err: true }); }
   };
+  if ($('#logout')) $('#logout').onclick = async () => {
+    if (!(await confirmDialog('Se déconnecter de votre compte Verso ? Votre bibliothèque reste sur ce téléphone.', 'Se déconnecter'))) return;
+    await (await import('./social.js')).signOut(); toast('Déconnecté'); renderSettings();
+  };
+  // Les états Android (notifications, détection) changent dans les réglages du téléphone.
+  const vis2 = () => { if (!document.hidden && location.hash === '#/reglages') { document.removeEventListener('visibilitychange', vis2); renderSettings(); } };
+  document.addEventListener('visibilitychange', vis2);
   if (installEvt) { $('#install').hidden = false; $('#install').onclick = () => { installEvt.prompt(); installEvt = null; $('#install').hidden = true; }; }
+  return () => document.removeEventListener('visibilitychange', vis2);
 }
 
 let installEvt = null;
@@ -1007,7 +1079,8 @@ window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); instal
 if ('serviceWorker' in navigator && location.protocol !== 'file:' && !android) navigator.serviceWorker.register('sw.js').catch(() => {});
 if (navigator.storage && navigator.storage.persist) navigator.storage.persisted().then(p => { if (!p) navigator.storage.persist().catch(() => {}); });
 installSharedLyrics();
+installPosts();
 startSocialAlerts().catch(() => {});
 // Notification de l'APK (demande d'ami, message) : ouvre l'écran concerné.
-window.versoOpenRoute = h => { if (/^#\/(amis|messages|discussion\/[\w-]+|u\/[\w-]+)$/.test(h)) location.hash = h; };
+window.versoOpenRoute = h => { if (/^#\/(amis|messages|discussion\/[\w-]+|u\/[\w-]+|post\/[\w-]+)$/.test(h)) location.hash = h; };
 route();

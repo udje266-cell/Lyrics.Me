@@ -310,6 +310,7 @@ export async function mountStudio(view, id) {
       <div class="field"><label for="x-name">Nom du fichier</label><input id="x-name" value="${esc(card.fileName || defaultName(card))}"></div>
       <div class="field row">${seg('xtype', [['image/png', 'PNG (qualité max.)'], ['image/jpeg', 'JPEG (plus léger)']], exportType)}</div>
       <div class="row field"><button class="primary" id="x-share">Partager</button><button id="x-dl">Télécharger</button><button id="x-all">Les 3 formats</button></div>
+      <div class="row field"><button class="chip ${card.private ? '' : 'on'}" id="x-pub" aria-pressed="${!card.private}">${card.private ? '🔒 Privée : non publiée sur mon profil' : '🌐 Publiée sur mon profil (une fois enregistrée)'}</button></div>
       <div class="card-box field"><h3>Carte animée (vidéo)</h3>
         <p class="small muted">Les paroles apparaissent à l'écran, avec un léger zoom sur le fond. Idéal pour les statuts, Stories et TikTok (sans son : ajoutez votre musique dans l'application de partage).</p>
         <div class="field">${seg('anim', [['word', 'Mot à mot'], ['line', 'Ligne par ligne'], ['fade', 'Fondu']], animMode)}</div>
@@ -366,6 +367,10 @@ export async function mountStudio(view, id) {
     on('#t-title', 'oninput', e => { card.title = e.target.value; change(); });
     on('#t-artist', 'oninput', e => { card.artist = e.target.value; change(); });
     on('#t-font', 'onchange', e => { st.font = e.target.value; const f = fontById(st.font); if (st.weight < 700 && !f.weights.includes(st.weight)) st.weight = Math.min(...f.weights); change(); refreshPanel(); });
+    on('#x-pub', 'onclick', async () => {
+      card.private = !card.private; await persist(); refreshPanel();
+      toast(card.private ? 'Cette carte ne sera pas publiée sur votre profil.' : 'Cette carte sera publiée sur votre profil une fois enregistrée.');
+    });
     on('#t-bold', 'onclick', () => { st.weight = st.weight >= 700 ? Math.min(...fontById(st.font).weights) : 700; change(); refreshPanel(); });
     on('#t-it', 'onclick', () => { st.italic = !st.italic; change(); refreshPanel(); });
     on('#t-up', 'onclick', () => { st.uppercase = !st.uppercase; change(); refreshPanel(); });

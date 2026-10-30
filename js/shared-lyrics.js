@@ -57,6 +57,7 @@ export async function onSongSaved(song) {
   if (busy || !song || song.deletedAt || song.missingLyrics || !String(song.lyrics || '').trim()) return;
   const h = hash(song.lyrics);
   if (song.sharedHash === h) return;
+  if (!(await db.setting('shareLyrics', true))) return;
   const user = await currentUser(); if (!user || !navigator.onLine) return;
   try {
     const at = await publish(song, user);

@@ -11,6 +11,7 @@ rules_version = '2';
 //   - avatar: string (requis, "" ou data:image/jpeg;base64, < 120 000 car.)
 //   - createdAt: timestamp (requis, immuable)
 //   - updatedAt: timestamp (requis, = heure de la requête)
+//   - visibility: string (optionnel, 'friends' | 'public') - qui voit les créations publiées
 //   Profil public (aucune donnée personnelle : l'e-mail reste dans Firebase Auth).
 //
 // Collection: handles             Document ID: pseudo (minuscules)
@@ -42,6 +43,21 @@ rules_version = '2';
 //
 // Sous-collection: lyrics/{key}/revisions   Document ID: auto
 //   - lyrics, by, byHandle, updatedAt : mêmes contraintes ; historique en ajout seul.
+//
+// Collection: posts               Document ID: identifiant de la carte (aléatoire)
+//   - owner: string (requis, = auteur, immuable)
+//   - image: string (requis, data:image/jpeg;base64, < 900 000 car.) - la carte
+//   - title, artist: string (requis, 0-200) ; excerpt: string (requis, 0-1500)
+//   - createdAt: timestamp (immuable) ; updatedAt: timestamp (= heure de la requête)
+//   Modifiable pendant 3 h après la publication.
+//   Visible par l'auteur, ses amis, et tout compte si le profil de l'auteur est « public ».
+//
+// Sous-collection: posts/{id}/likes      Document ID: uid de la personne qui aime
+//   - postOwner: string (requis, = owner du post) ; createdAt: timestamp (= heure de la requête)
+// Sous-collection: posts/{id}/comments   Document ID: auto
+//   - from: string (= auteur) ; postOwner: string (= owner du post)
+//   - text: string (requis, 1-500) ; createdAt: timestamp (= heure de la requête)
+//   Supprimable par son auteur ou par l'auteur du post.
 //
 // ===============================================================
 
@@ -76,7 +92,8 @@ service cloud.firestore {
 
     // ---------- Domain Validators ----------
     function isValidProfile(uid) {
-      return hasOnlyAllowedFields(['handle', 'name', 'bio', 'avatar', 'createdAt', 'updatedAt'])
+      return hasOnlyAllowedFields(['handle', 'name', 'bio', 'avatar', 'visibility', 'createdAt', 'updatedAt'])
+        && (!('visibility' in data()) || data().visibility in ['friends', 'public'])
         && data().keys().hasAll(['handle', 'name', 'bio', 'avatar', 'createdAt', 'updatedAt'])
         && isValidHandle(data().handle)
         && isStr(data().name, 0, 50)
@@ -120,6 +137,65 @@ service cloud.firestore {
         && isStr(data().title, 1, 200) && isStr(data().artist, 1, 200) && isStr(data().album, 0, 200)
         && data().createdAt is timestamp
         && isValidLyricsEdit();
+    }
+
+    // L'utilisateur connecté peut-il voir les publications de « owner » ?
+    function canSeePostsOf(owner) {
+      return isAuthenticated() && (
+        request.auth.uid == owner
+        || exists(/databases/$(database)/documents/friendships/$(request.auth.uid < owner ? request.auth.uid + '_' + owner : owner + '_' + request.auth.uid))
+        || get(/databases/$(database)/documents/profiles/$(owner)).data.get('visibility', 'friends') == 'public');
+    }
+    function postOwner(postId) {
+      return get(/databases/$(database)/documents/posts/$(postId)).data.owner;
+    }
+    function isValidPost() {
+      return hasOnlyAllowedFields(['owner', 'image', 'title', 'artist', 'excerpt', 'createdAt', 'updatedAt'])
+        && data().keys().hasAll(['owner', 'image', 'title', 'artist', 'excerpt', 'createdAt', 'updatedAt'])
+        && data().owner == request.auth.uid
+        && isStr(data().image, 1, 900000) && data().image.matches('^data:image/jpeg;base64,.*')
+        && isStr(data().title, 0, 200) && isStr(data().artist, 0, 200) && isStr(data().excerpt, 0, 1500)
+        && data().createdAt is timestamp
+        && data().updatedAt == request.time;
+    }
+
+    // ---------- Créations publiées, j'aime et commentaires ----------
+    match /posts/{postId} {
+      allow read: if canSeePostsOf(resource.data.owner);
+      allow create: if isAuthenticated() && isValidPost() && data().createdAt == request.time;
+      // Modifiable pendant 3 heures après la publication, puis figée.
+      allow update: if isAuthenticated() && resource.data.owner == request.auth.uid && isValidPost()
+        && data().createdAt == resource.data.createdAt
+        && request.time < resource.data.createdAt + duration.value(3, 'h');
+      allow delete: if isAuthenticated() && resource.data.owner == request.auth.uid;
+
+      match /likes/{uid} {
+        allow read: if canSeePostsOf(postOwner(postId));
+        allow create: if isOwner(uid) && canSeePostsOf(postOwner(postId))
+          && hasOnlyAllowedFields(['postOwner', 'createdAt'])
+          && data().postOwner == postOwner(postId) && data().createdAt == request.time;
+        allow update: if false;
+        allow delete: if isOwner(uid);
+      }
+      match /comments/{commentId} {
+        allow read: if canSeePostsOf(postOwner(postId));
+        allow create: if isAuthenticated() && canSeePostsOf(postOwner(postId))
+          && hasOnlyAllowedFields(['from', 'postOwner', 'text', 'createdAt'])
+          && data().keys().hasAll(['from', 'postOwner', 'text', 'createdAt'])
+          && data().from == request.auth.uid && data().postOwner == postOwner(postId)
+          && isStr(data().text, 1, 500) && data().createdAt == request.time;
+        allow update: if false;
+        allow delete: if isAuthenticated()
+          && (resource.data.from == request.auth.uid || resource.data.postOwner == request.auth.uid);
+      }
+    }
+
+    // Activité sur mes publications (j'aime et commentaires reçus), pour les alertes.
+    match /{path=**}/likes/{uid} {
+      allow read: if isAuthenticated() && resource.data.postOwner == request.auth.uid;
+    }
+    match /{path=**}/comments/{commentId} {
+      allow read: if isAuthenticated() && resource.data.postOwner == request.auth.uid;
     }
 
     // ---------- Paroles partagées (collaboratives) ----------

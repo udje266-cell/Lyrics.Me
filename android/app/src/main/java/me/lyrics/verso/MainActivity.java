@@ -74,11 +74,16 @@ public class MainActivity extends Activity {
         updater = new WebUpdater(this);
         web = new WebView(this);
         web.setBackgroundColor(Color.parseColor("#131a11"));
-        setContentView(web);
+        // Le WebView ignore son propre « padding » : on l'enveloppe dans un cadre qui réserve
+        // la place de la barre d'état, de la barre de gestes et du clavier.
+        android.widget.FrameLayout frame = new android.widget.FrameLayout(this);
+        frame.setBackgroundColor(Color.parseColor("#131a11"));
+        frame.addView(web, new android.widget.FrameLayout.LayoutParams(-1, -1));
+        setContentView(frame);
         getWindow().getDecorView().setBackgroundColor(Color.parseColor("#131a11"));
         // Android 15 affiche les applications bord à bord : on garde le contenu entre la barre
         // d'état, la barre de navigation et le clavier.
-        web.setOnApplyWindowInsetsListener((View v, WindowInsets insets) -> {
+        frame.setOnApplyWindowInsetsListener((View v, WindowInsets insets) -> {
             int l, t, r, b;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 android.graphics.Insets i = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout() | WindowInsets.Type.ime());
@@ -114,7 +119,7 @@ public class MainActivity extends Activity {
             getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
                 android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT, this::handleBack);
         }
-        s.setUserAgentString(s.getUserAgentString() + " VersoAndroid/1.0");
+        s.setUserAgentString(s.getUserAgentString() + " VersoAndroid/1.0 VersoInsets");
 
         web.addJavascriptInterface(new Bridge(), "VersoAndroid");
         web.setWebViewClient(new WebViewClient() {
@@ -331,6 +336,7 @@ public class MainActivity extends Activity {
                     int c = Color.parseColor(hex);
                     web.setBackgroundColor(c);
                     getWindow().getDecorView().setBackgroundColor(c);
+                    ((View) web.getParent()).setBackgroundColor(c);
                     getWindow().setStatusBarColor(c);
                     getWindow().setNavigationBarColor(c);
                     boolean light = (Color.red(c) * 299 + Color.green(c) * 587 + Color.blue(c) * 114) / 1000 > 150;

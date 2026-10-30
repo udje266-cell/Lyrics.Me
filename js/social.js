@@ -97,6 +97,7 @@ export async function syncProfile(local) {
     if (old) b.delete(F.doc(fs, 'handles', old));
   }
   b.set(ref, { handle, name: String(local.name || '').slice(0, 50), bio: String(local.bio || '').slice(0, 160), avatar,
+    visibility: (await db.setting('visibility', 'friends')) === 'public' ? 'public' : 'friends',
     createdAt: cur.exists() ? cur.data().createdAt : F.serverTimestamp(), updatedAt: F.serverTimestamp() });
   await b.commit();
   profileCache.delete(u.uid);
@@ -160,6 +161,7 @@ export async function renderAccount() {
           toast('Connecté');
         }
         startSocialAlerts();
+        import('./posts.js').then(m => m.publishAll()).catch(() => {});
         go('#/profil');
       } catch (err) { fail(errMsg(err)); }
     };
@@ -432,7 +434,17 @@ export async function renderUser(uid) {
       <div class="pf-head">${big}<h1>${esc(p.name || '@' + p.handle)}</h1><p class="pf-handle">@${esc(p.handle)}</p>
         ${since ? `<p class="small muted" style="margin:0">Amis depuis le ${since.toDate().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</p>` : ''}
         <div class="row pf-btns">${actions}</div>
-        ${p.bio ? `<p class="pf-bio">${esc(p.bio)}</p>` : ''}</div>`;
+        ${p.bio ? `<p class="pf-bio">${esc(p.bio)}</p>` : ''}</div>
+      <div class="pf-tabs"><button aria-selected="true">Créations</button></div><div id="u-posts"><p class="muted small" style="text-align:center">Chargement…</p></div>`;
+    import('./posts.js').then(async m => {
+      const box = view.querySelector('#u-posts'); if (!box) return;
+      try {
+        const posts = await m.postsOf(uid);
+        box.innerHTML = posts.length ? m.postGrid(posts) : '<div class="empty">Aucune création publiée pour l\'instant.</div>';
+      } catch (e) {
+        box.innerHTML = `<div class="empty">🔒 ${e.code === 'permission-denied' ? 'Les créations de @' + esc(p.handle) + ' sont visibles par ses amis uniquement.' : esc(errMsg(e))}</div>`;
+      }
+    });
     const on = (id, fn) => { const b = view.querySelector(id); if (b) b.onclick = async () => { b.disabled = true; try { await fn(); } catch (e) { toast(errMsg(e), { err: true }); } draw(); }; };
     on('#u-add', () => F.setDoc(F.doc(fs, 'friendRequests', me.uid + '_' + uid), { from: me.uid, to: uid, createdAt: F.serverTimestamp() }).then(() => toast('Demande envoyée')));
     on('#u-cancel', () => F.deleteDoc(F.doc(fs, 'friendRequests', me.uid + '_' + uid)));
@@ -492,6 +504,8 @@ export async function startSocialAlerts() {
     firstFr = false; paint();
   }, () => {});
   window.addEventListener('hashchange', () => setTimeout(paint, 300));
-  alertsStop = () => { u1(); u2(); alertsStop = null; };
+  let u3 = () => {};
+  import('./posts.js').then(m => m.watchPostActivity(me, (msg, route) => { if (location.hash !== route) toast(msg, { duration: 7000, action: { label: 'Voir', run: () => go(route) } }); })).then(stop => { u3 = stop; }).catch(() => {});
+  alertsStop = () => { u1(); u2(); u3(); alertsStop = null; };
 }
 export function stopSocialAlerts() { if (alertsStop) alertsStop(); document.querySelectorAll('.nav-dot').forEach(d => d.remove()); }

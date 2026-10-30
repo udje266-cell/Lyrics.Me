@@ -25,6 +25,7 @@ export async function renderProfile() {
   const av = pr.avatar ? `<img class="pf-avatar" src="${blobUrl('avatar' + (pr.updatedAt || 0), pr.avatar)}" alt="" width="96" height="96">` : `<span class="pf-avatar ph" aria-hidden="true">${esc((pr.name || pr.handle || 'V')[0].toUpperCase())}</span>`;
   const stat = (n, l) => `<div><b>${n}</b><span>${l}</span></div>`;
   const user = await currentUser();
+  const published = user ? await db.setting('published', {}) : {};
   let friendsN = 0;
   if (user) try { const { F, fs } = await fb(); friendsN = (await F.getDocs(F.query(F.collection(fs, 'friendships'), F.where('members', 'array-contains', user.uid)))).size; } catch {}
   const unread = user ? await unreadCount().catch(() => 0) : 0;
@@ -43,6 +44,7 @@ export async function renderProfile() {
     </div>
     <div class="pf-tabs" role="tablist">
       <button role="tab" data-pt="cards" aria-selected="${tab === 'cards'}">Créations</button>
+      ${user ? `<button role="tab" data-pt="pub" aria-selected="${tab === 'pub'}">Publiées</button>` : ''}
       <button role="tab" data-pt="favs" aria-selected="${tab === 'favs'}">Favoris</button>
       <button role="tab" data-pt="passages" aria-selected="${tab === 'passages'}">Passages</button>
     </div>
@@ -55,8 +57,20 @@ export async function renderProfile() {
   const body = view.querySelector('#pf-body');
   const draw = () => {
     view.querySelectorAll('[data-pt]').forEach(b => b.setAttribute('aria-selected', b.dataset.pt === tab));
-    if (tab === 'cards') body.innerHTML = cards.length ? `<div class="pf-grid">${cards.map(c => `<a href="#/studio/${c.id}" aria-label="${esc(c.title)}">${c.thumb ? `<img src="${blobUrl('thumb-' + c.id + c.updatedAt, c.thumb)}" alt="" loading="lazy">` : ''}</a>`).join('')}</div>`
+    if (tab === 'cards') body.innerHTML = cards.length ? `<div class="pf-grid">${cards.map(c => `<a href="${user && published[c.id] !== undefined ? '#/post/' + c.id : '#/studio/' + c.id}" aria-label="${esc(c.title)}">${c.thumb ? `<img src="${blobUrl('thumb-' + c.id + c.updatedAt, c.thumb)}" alt="" loading="lazy">` : ''}</a>`).join('')}</div>`
       : '<div class="empty">Vos cartes apparaîtront ici.<br><br><a class="btn primary" href="#/bibliotheque">Créer une carte</a></div>';
+    if (tab === 'pub') {
+      body.innerHTML = '<p class="muted small" style="text-align:center">Chargement…</p>';
+      import('./posts.js').then(async m => {
+        try {
+          const posts = await m.postsOf(user.uid);
+          if (tab !== 'pub') return;
+          const vis = await db.setting('visibility', 'friends');
+          body.innerHTML = `<p class="small muted pf-vis">${vis === 'public' ? '🌍 Visibles par tous les comptes Verso' : '👥 Visibles par vos amis'} · <a href="#/reglages">Modifier</a></p>`
+            + (posts.length ? m.postGrid(posts) : '<div class="empty">Vos cartes enregistrées apparaissent ici une fois publiées.</div>');
+        } catch (e) { body.innerHTML = `<div class="notice err">${esc(errMsg(e))}</div>`; }
+      });
+    }
     if (tab === 'favs') body.innerHTML = favs.length ? `<ul class="songs">${favs.map(s => `<li class="song"><a class="main" href="#/morceau/${s.id}"><div style="min-width:0"><div class="t">${esc(s.title)}</div><div class="a">${esc(s.artist)}</div></div></a></li>`).join('')}</ul>`
       : '<div class="empty">Touchez ☆ sur un morceau pour l\'ajouter à vos favoris.</div>';
     if (tab === 'passages') body.innerHTML = passages.length ? passages.map(p => `<a class="card-box" style="display:block;text-decoration:none;color:inherit;margin-bottom:8px" href="#/morceau/${p.songId}"><div style="white-space:pre-line">${esc(p.text)}</div><div class="small muted" style="margin-top:6px">${esc(p.title)}, ${esc(p.artist)}</div></a>`).join('')

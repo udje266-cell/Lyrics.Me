@@ -1,9 +1,9 @@
 // Service worker : met l'application en cache pour un usage hors connexion.
 // Incrémentez VERSION à chaque modification des fichiers de l'application.
-const VERSION = 'verso-v34';
+const VERSION = 'verso-v36';
 const ASSETS = [
   './', './index.html', './manifest.webmanifest', './css/styles.css', './css/fonts.css',
-  './js/app.js', './js/db.js', './js/render.js', './js/sources.js', './js/studio.js', './js/albums.js', './js/discography.js', './js/artists.js', './js/profile.js', './js/search.js', './js/feeds.js', './js/social.js', './js/shared-lyrics.js',
+  './js/app.js', './js/db.js', './js/render.js', './js/sources.js', './js/studio.js', './js/albums.js', './js/discography.js', './js/artists.js', './js/profile.js', './js/search.js', './js/feeds.js', './js/social.js', './js/shared-lyrics.js', './js/posts.js',
   './js/vendor/firebase/firebase-app.js', './js/vendor/firebase/firebase-auth.js', './js/vendor/firebase/firebase-firestore.js',
   './icons/icon.png', './icons/logo.png',
   "./fonts/BebasNeue-400-normal-latin-ext.woff2",
