@@ -128,9 +128,25 @@ export async function mountStudio(view, id) {
   // --- Historique et sauvegarde automatique ------------------------------
   let saveTimer = 0, histTimer = 0;
   let deleted = false;
+  // Répare une image devenue illisible en la réencodant depuis sa version déjà décodée.
+  async function healImages() {
+    for (const k of ['cover', 'photo', 'label']) {
+      const b = card.images[k];
+      if (!(b instanceof Blob)) continue;
+      try { await b.slice(0, 16).arrayBuffer(); }
+      catch {
+        const bmp = imgs[k];
+        if (!bmp) { card.images[k] = null; continue; }
+        const c = document.createElement('canvas'); c.width = bmp.width; c.height = bmp.height;
+        c.getContext('2d').drawImage(bmp, 0, 0);
+        card.images[k] = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.92));
+      }
+    }
+  }
   const persist = async () => {
     saveTimer = 0;
     if (deleted) return;
+    await healImages();
     card.updatedAt = Date.now();
     try { card.thumb = await makeThumb(card, imgs); } catch { /* aperçu facultatif */ }
     await safe(() => db.put('cards', card));

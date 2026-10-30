@@ -634,7 +634,9 @@ export async function compressImage(file, max = 2160) {
   const bmp = await blobToBitmap(file);
   if (!bmp) throw new Error("Impossible de lire cette image.");
   const s = Math.min(1, max / Math.max(bmp.width, bmp.height));
-  if (s === 1 && file.size < 1.5e6) return file;
+  // Toujours une copie : sur Android, une photo choisie n'est qu'une référence au fichier du
+  // téléphone, qui devient illisible quand l'autorisation expire (« NotReadableError »).
+  if (s === 1 && file.size < 1.5e6) return new Blob([await file.arrayBuffer()], { type: file.type || 'image/jpeg' });
   const c = document.createElement('canvas');
   c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
   c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);

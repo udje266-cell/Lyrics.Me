@@ -28,7 +28,9 @@ export class StorageError extends Error {
     const quota = cause && (cause.name === 'QuotaExceededError' || /quota/i.test(cause.message || ''));
     super(quota
       ? "Espace de stockage insuffisant : l'enregistrement a échoué. Libérez de la place (corbeille, anciennes créations) ou exportez une sauvegarde."
-      : "L'enregistrement a échoué : " + (cause && cause.message ? cause.message : 'erreur inconnue'));
+      : cause && cause.name === 'NotReadableError'
+        ? "Une image n'est plus lisible (fichier du téléphone devenu inaccessible). Réimportez-la depuis la galerie."
+        : "L'enregistrement a échoué : " + (cause && cause.message ? cause.message : 'erreur inconnue'));
     this.quota = quota;
     this.cause = cause;
   }
@@ -51,7 +53,10 @@ function tx(store, mode, fn) {
 // d'Android refuse souvent d'enregistrer des Blob dans IndexedDB (« InvalidBlob »).
 // La conversion est faite ici, de façon transparente pour le reste de l'application.
 async function pack(v) {
-  if (v instanceof Blob) return { __bin: await v.arrayBuffer(), type: v.type };
+  if (v instanceof Blob) {
+    try { return { __bin: await v.arrayBuffer(), type: v.type }; }
+    catch (e) { throw new StorageError(e); }
+  }
   if (Array.isArray(v)) return Promise.all(v.map(pack));
   if (v && typeof v === 'object' && !(v instanceof ArrayBuffer) && !ArrayBuffer.isView(v)) {
     const o = {};

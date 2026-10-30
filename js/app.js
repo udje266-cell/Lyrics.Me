@@ -18,7 +18,12 @@ export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;'
 export const norm = s => String(s || '').toLocaleLowerCase('fr').replace(/œ/g, 'oe').replace(/æ/g, 'ae').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[’']/g, "'").replace(/\s+/g, ' ').trim();
 const fmtDate = t => new Date(t).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
 
+const recentToasts = new Map();
 export function toast(msg, opts = {}) {
+  // Un même message n'est jamais empilé : il n'est réaffiché qu'après 6 s.
+  const now = Date.now();
+  if (now - (recentToasts.get(msg) || 0) < 6000) return;
+  recentToasts.set(msg, now);
   const el = document.createElement('div');
   el.className = 'toast' + (opts.err ? ' err' : '');
   el.innerHTML = `<span>${esc(msg)}</span>`;
