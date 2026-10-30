@@ -138,6 +138,9 @@ export const android = window.VersoAndroid || null;
 if (android) document.documentElement.classList.add('is-app');
 // Bouton retour du téléphone (appelé par l'APK) : ferme d'abord ce qui est ouvert,
 // puis revient à l'écran précédent ; depuis l'accueil, l'application se ferme.
+// Mise à jour à distance (APK) : nouvelle version téléchargée en arrière-plan.
+window.versoUpdateReady = () => toast('Mise à jour de Verso prête.', { duration: 15000, action: { label: 'Redémarrer', run: () => android.applyWebUpdate() } });
+window.versoUpdateNeedsApk = () => toast('Une nouvelle version de Verso demande de réinstaller l\'application (Réglages → Télécharger l\'APK).');
 window.versoBack = () => {
   const dlg = document.querySelector('dialog[open]');
   if (dlg) { dlg.close(); return true; }
@@ -967,7 +970,7 @@ async function renderSettings() {
       <p class="small muted">Genius, Musixmatch et Spotify ne sont pas branchés : l'API publique de Genius ne fournit pas les paroles ; Musixmatch ne donne gratuitement que 30 % du texte et exige une clé et un contrat commercial pour le texte complet. Toute autre page web : collez le texte, le lien est conservé comme source.</p></section>
     <section class="card-box"><h3>Installer l'application</h3>${android ? '' : '<p class="small"><a class="btn primary" href="installer.html">Télécharger l\'application Android (APK)</a></p>'}<p class="small">Sur Android (Chrome) : menu ⋮ puis « Installer l'application » ou « Ajouter à l'écran d'accueil ». Sur ordinateur : icône d'installation dans la barre d'adresse.</p>
       <button id="install" hidden class="primary">Installer Verso</button></section>
-    <p class="small muted" style="text-align:center">Verso · application personnelle, sans publicité. Compte facultatif (amis et messages).</p>`;
+    <p class="small muted" style="text-align:center">Verso · application personnelle, sans publicité. Compte facultatif (amis et messages).${android && android.webBuild ? ` · version ${android.webBuild()}` : ""}</p>`;
   $$('[data-t]').forEach(b => b.onclick = () => {
     try { localStorage.setItem('verso-theme', b.dataset.t); } catch {}
     if (b.dataset.t === 'auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = b.dataset.t;

@@ -56,6 +56,8 @@ public class MainActivity extends Activity {
     private static final int PICK_FILE = 1;
 
     private WebView web;
+    private volatile WebUpdater updater;
+    private long lastUpdateCheck = 0;
     static final String EXTRA_NOW_PLAYING = "verso.nowPlaying";
     /** Vrai quand Verso est à l'écran : pas de notification pour la musique détectée. */
     static volatile boolean visible = false;
@@ -67,6 +69,7 @@ public class MainActivity extends Activity {
         super.onCreate(state);
         getWindow().setStatusBarColor(Color.parseColor("#131a11"));
         getWindow().setNavigationBarColor(Color.parseColor("#131a11"));
+        updater = new WebUpdater(this);
         web = new WebView(this);
         web.setBackgroundColor(Color.parseColor("#131a11"));
         setContentView(web);
@@ -119,7 +122,7 @@ public class MainActivity extends Activity {
                 if (!HOST.equals(u.getHost())) return null; // Deezer, LRCLIB… : réseau normal
                 String path = u.getPath() == null || u.getPath().equals("/") ? "/index.html" : u.getPath();
                 try {
-                    InputStream in = getAssets().open("www" + path);
+                    InputStream in = updater.open(path.substring(1));
                     String ext = MimeTypeMap.getFileExtensionFromUrl(path);
                     String mime = mimeFor(ext);
                     Map<String, String> headers = new HashMap<>();
@@ -134,6 +137,7 @@ public class MainActivity extends Activity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 pageReady = true;
+                checkWebUpdate();
                 if (pendingNowPlaying) { pendingNowPlaying = false; web.postDelayed(() -> openNowPlayingInWeb(), 600); }
             }
 
@@ -166,6 +170,19 @@ public class MainActivity extends Activity {
         if (state != null) web.restoreState(state);
         else web.loadUrl(BASE + "index.html");
         handleNowPlayingIntent(getIntent());
+    }
+
+    /** Cherche une nouvelle version de l'application web (au plus une fois par heure). */
+    private void checkWebUpdate() {
+        if (System.currentTimeMillis() - lastUpdateCheck < 3600_000L) return;
+        lastUpdateCheck = System.currentTimeMillis();
+        new Thread(() -> {
+            int r = updater.check();
+            if (r == 0) return;
+            runOnUiThread(() -> web.evaluateJavascript(r > 0
+                ? "window.versoUpdateReady && versoUpdateReady(" + r + ")"
+                : "window.versoUpdateNeedsApk && versoUpdateNeedsApk()", null));
+        }).start();
     }
 
     private static String mimeFor(String ext) {
@@ -210,6 +227,7 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         visible = true;
+        if (pageReady) checkWebUpdate();
         ((android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE)).cancel(NowPlayingService.NOTIF_ID);
         // Après une mise à jour de l'APK, Android ne relance pas toujours le service d'écoute.
         if (new Bridge().nowPlayingAllowed() && Build.VERSION.SDK_INT >= 24)
@@ -313,6 +331,16 @@ public class MainActivity extends Activity {
         public boolean nowPlayingAllowed() {
             String flat = Settings.Secure.getString(getContentResolver(), "enabled_notification_listeners");
             return flat != null && flat.contains(getPackageName());
+        }
+
+        /** Version de l'application web en cours. */
+        @JavascriptInterface
+        public int webBuild() { return updater.activeBuild(); }
+
+        /** Applique la mise à jour téléchargée (rechargement, les données restent). */
+        @JavascriptInterface
+        public void applyWebUpdate() {
+            runOnUiThread(() -> { updater = new WebUpdater(MainActivity.this); web.clearCache(false); web.reload(); });
         }
 
         /** Texte du presse-papiers (paroles copiées depuis Google), lu au retour dans Verso. */
