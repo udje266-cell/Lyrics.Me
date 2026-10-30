@@ -280,6 +280,28 @@ function drawTrends(c) {
 }
 
 // --- Musique en cours (application Android) -------------------------------
+// Musique détectée : on cherche une fois ses paroles (bibliothèque puis LRCLIB) pour
+// prévenir avant le clic si elles manquent, et les ouvrir directement sinon.
+const npLookups = new Map();
+const npArtist = np => String(np.artist || '').split(/,|&| feat\.? | ft\.? /i)[0].trim();
+async function npMine(np) {
+  const artist = npArtist(np);
+  return (await liveSongs()).find(s => norm(s.title) === norm(np.title) && (!artist || norm(s.artist) === norm(artist)));
+}
+function npLookup(np) {
+  const k = norm(np.title) + '|' + norm(npArtist(np));
+  if (!npLookups.has(k)) {
+    const p = (async () => {
+      const mine = await npMine(np);
+      if (mine) return { mine, missing: !!mine.missingLyrics };
+      const r = await findLyrics(np.title, npArtist(np), np.album || '', 0);
+      return { found: r, missing: !r };
+    })().catch(() => { npLookups.delete(k); return { offline: true }; });
+    npLookups.set(k, p);
+  }
+  return npLookups.get(k);
+}
+
 function watchNowPlaying() {
   if (!android || !android.nowPlaying) return null;
   let last = '';
@@ -301,9 +323,17 @@ function watchNowPlaying() {
     if (!np || !np.title) { el.innerHTML = ''; return; }
     el.innerHTML = `<div class="np"><span class="np-eq${np.playing ? ' on' : ''}" aria-hidden="true"><i></i><i></i><i></i></span>
       <div style="min-width:0;flex:1"><span class="small muted">${np.playing ? 'En écoute' : 'En pause'} sur ${esc(np.app || 'une application')}</span>
-      <div class="np-t">${esc(np.title)}</div><div class="small muted">${esc(np.artist || '')}</div></div>
-      <button class="primary" id="np-ly">Paroles</button></div>`;
-    el.querySelector('#np-ly').onclick = () => openNowPlaying(np);
+      <div class="np-t">${esc(np.title)}</div><div class="small muted np-a">${esc(np.artist || '')}</div></div>
+      <button class="primary" id="np-ly" disabled>…</button></div>`;
+    const btn = el.querySelector('#np-ly');
+    btn.onclick = () => openNowPlaying(np);
+    const st = await npLookup(np);
+    if (last !== key || !btn.isConnected) return;
+    btn.disabled = false;
+    if (st.missing) {
+      el.querySelector('.np-a').insertAdjacentHTML('beforeend', ' <span class="np-miss">(paroles manquantes)</span>');
+      btn.textContent = 'Ajouter'; btn.className = 'ghost';
+    } else btn.textContent = 'Paroles';
   };
   tick();
   const t = setInterval(tick, 8000);
@@ -312,18 +342,41 @@ function watchNowPlaying() {
   return () => { clearInterval(t); document.removeEventListener('visibilitychange', vis); };
 }
 
-async function openNowPlaying(np) {
-  const artist = String(np.artist || '').split(/,|&| feat\.? | ft\.? /i)[0].trim();
-  const mine = (await liveSongs()).find(s => norm(s.title) === norm(np.title) && (!artist || norm(s.artist) === norm(artist)));
-  if (mine) return go('#/morceau/' + mine.id);
-  const btn = $('#np-ly'); if (btn) { btn.disabled = true; btn.textContent = 'Recherche…'; }
-  let r = null;
-  try { r = await findLyrics(np.title, artist, np.album || '', 0); } catch {}
-  const pre = { title: np.title, artist, album: np.album || '', lyrics: r ? r.lyrics : '', sourceName: r ? 'LRCLIB' : '', sourceUrl: r ? r.sourceUrl : '' };
+export async function openNowPlaying(np) {
+  const btn = $('#np-ly'); if (btn) { btn.disabled = true; btn.textContent = 'Ouverture…'; }
+  const st = await npLookup(np);
+  if (st.mine) return go('#/morceau/' + st.mine.id);
+  const artist = npArtist(np);
+  if (st.found) {
+    // Paroles trouvées : le morceau est enregistré tout de suite (avec sa source) et ouvert.
+    const now = Date.now(), r = st.found;
+    const s = { id: uid(), title: np.title, artist, featuring: '', album: np.album || '', lyrics: r.lyrics,
+      lang: '', collection: '', tags: [], sourceName: r.sourceName, sourceUrl: r.sourceUrl, note: '', cover: null,
+      missingLyrics: false, createdAt: now, updatedAt: now };
+    await attachAlbum(s);
+    await safe(() => db.put('songs', s));
+    npLookups.clear();
+    go('#/morceau/' + s.id);
+    // Pochette en arrière-plan, sans bloquer l'ouverture.
+    findArtwork(s.title, s.artist).then(async a => {
+      const im = a.images.find(i => i.kind === 'album'); if (!im) return;
+      const cur = await db.get('songs', s.id); if (!cur || cur.cover) return;
+      cur.cover = await compressImage(await fetchImage(im.url)); cur.updatedAt = Date.now();
+      await db.put('songs', cur);
+    }).catch(() => {});
+    return;
+  }
+  const pre = { title: np.title, artist, album: np.album || '', lyrics: '', sourceName: '', sourceUrl: '' };
   try { sessionStorage.setItem('verso-prefill', JSON.stringify(pre)); } catch {}
-  if (!r) toast('Paroles introuvables sur LRCLIB : collez-les pour ajouter ce titre.');
+  toast(st.offline ? 'Hors connexion : collez les paroles pour ajouter ce titre.' : 'Paroles manquantes : collez-les pour ajouter ce titre.');
   go('#/ajouter/manuel');
 }
+// Appelé par l'APK quand on touche la notification « En écoute ».
+window.versoOpenNowPlaying = () => {
+  let np = null;
+  try { np = JSON.parse(android.nowPlaying() || 'null'); } catch {}
+  if (np && np.title) openNowPlaying(np);
+};
 
 
 function tileHtml(c) {

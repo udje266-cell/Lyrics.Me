@@ -56,6 +56,10 @@ public class MainActivity extends Activity {
     private static final int PICK_FILE = 1;
 
     private WebView web;
+    static final String EXTRA_NOW_PLAYING = "verso.nowPlaying";
+    /** Vrai quand Verso est à l'écran : pas de notification pour la musique détectée. */
+    static volatile boolean visible = false;
+    private boolean pageReady = false, pendingNowPlaying = false;
     private ValueCallback<Uri[]> fileCallback;
 
     @Override
@@ -128,6 +132,12 @@ public class MainActivity extends Activity {
             }
 
             @Override
+            public void onPageFinished(WebView view, String url) {
+                pageReady = true;
+                if (pendingNowPlaying) { pendingNowPlaying = false; web.postDelayed(() -> openNowPlayingInWeb(), 600); }
+            }
+
+            @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest req) {
                 Uri u = req.getUrl();
                 if (HOST.equals(u.getHost())) return false;
@@ -155,6 +165,7 @@ public class MainActivity extends Activity {
 
         if (state != null) web.restoreState(state);
         else web.loadUrl(BASE + "index.html");
+        handleNowPlayingIntent(getIntent());
     }
 
     private static String mimeFor(String ext) {
@@ -188,6 +199,42 @@ public class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() { handleBack(); }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        handleNowPlayingIntent(intent);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        visible = true;
+        ((android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE)).cancel(NowPlayingService.NOTIF_ID);
+        // Android 13+ : autorisation d'afficher la notification « musique détectée ».
+        if (Build.VERSION.SDK_INT >= 33 && new Bridge().nowPlayingAllowed()
+            && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+            && !getPreferences(MODE_PRIVATE).getBoolean("notifAsked", false)) {
+            getPreferences(MODE_PRIVATE).edit().putBoolean("notifAsked", true).apply();
+            requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 7);
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        visible = false;
+    }
+
+    private void handleNowPlayingIntent(Intent intent) {
+        if (intent == null || !intent.getBooleanExtra(EXTRA_NOW_PLAYING, false)) return;
+        intent.removeExtra(EXTRA_NOW_PLAYING);
+        if (pageReady) openNowPlayingInWeb(); else pendingNowPlaying = true;
+    }
+
+    private void openNowPlayingInWeb() {
+        web.evaluateJavascript("window.versoOpenNowPlaying && versoOpenNowPlaying()", null);
+    }
 
     // Retour : l'application web ferme d'abord ce qui est ouvert, puis revient en arrière ;
     // depuis l'accueil, Verso passe en arrière-plan comme une vraie application.

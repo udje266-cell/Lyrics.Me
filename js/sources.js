@@ -148,6 +148,16 @@ export async function searchArtists(q) {
   return (r.data || []).map(a => ({ id: a.id, name: a.name, picture: a.picture_medium, fans: a.nb_fan, albums: a.nb_album }));
 }
 
+export async function searchTracks(q) {
+  const r = await jsonp('/search', { q, limit: 8 });
+  return (r.data || []).map(t => ({ title: t.title, artist: t.artist ? t.artist.name : '', album: t.album ? t.album.title : '', thumb: t.album ? t.album.cover_small : '', duration: t.duration }));
+}
+
+export async function searchAlbums(q) {
+  const r = await jsonp('/search/album', { q, limit: 8 });
+  return (r.data || []).map(a => ({ id: a.id, title: a.title, artist: a.artist ? a.artist.name : '', artistId: a.artist ? a.artist.id : null, thumb: a.cover_medium, type: a.record_type }));
+}
+
 // Tous les albums, EP et singles de l'artiste (pagination Deezer).
 export async function artistAlbums(id) {
   const out = [];
