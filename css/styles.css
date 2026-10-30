@@ -464,3 +464,5 @@ button.small, .btn.small { padding: 6px 12px; min-height: 34px; font-size: .82re
 .font-pick button span { font-size: 1.7rem; line-height: 1.1; }
 .font-pick button small { font-family: Inter, system-ui, sans-serif; font-weight: 500; font-size: .66rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .font-pick button.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
+.chat-bar { align-items: flex-end; }
+.chat-bar textarea { flex: 1; min-width: 0; min-height: 44px; max-height: 164px; resize: none; border-radius: 22px; padding: 11px 16px; line-height: 1.4; overflow-y: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }

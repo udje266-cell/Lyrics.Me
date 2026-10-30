@@ -346,7 +346,7 @@ export async function renderChat(pairId) {
     <div class="chat-msgs" id="cm" aria-live="polite"><p class="muted small" style="text-align:center">Chargement…</p></div>
     <form class="chat-bar" id="cf">
       <button type="button" class="icon-btn ghost" id="c-att" aria-label="Partager une carte ou un morceau">+</button>
-      <input id="c-t" placeholder="Message…" autocomplete="off" maxlength="2000" aria-label="Message" enterkeyhint="send">
+      <textarea id="c-t" rows="1" placeholder="Message…" autocomplete="off" maxlength="2000" aria-label="Message" enterkeyhint="enter"></textarea>
       <button class="primary" id="c-send" aria-label="Envoyer">➤</button>
     </form></div>`;
   const $ = s => view.querySelector(s);
@@ -360,7 +360,7 @@ export async function renderChat(pairId) {
   $('#cf').onsubmit = e => {
     e.preventDefault();
     const t = $('#c-t').value.trim(); if (!t) return;
-    $('#c-t').value = '';
+    $('#c-t').value = ''; $('#c-t').dispatchEvent(new Event('input', { bubbles: true }));
     send({ text: t }, t);
   };
   $('#c-att').onclick = async () => {

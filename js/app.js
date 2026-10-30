@@ -137,6 +137,13 @@ function lyricsFromGoogle(title, artist) {
 // Dans l'application Android (APK), l'enregistrement et le partage passent par le téléphone.
 export const android = window.VersoAndroid || null;
 if (android) document.documentElement.classList.add('is-app');
+// Zones de saisie des messages : retour à la ligne automatique, hauteur qui suit le texte (6 lignes max).
+document.addEventListener('input', e => {
+  const t = e.target;
+  if (!t.matches || !t.matches('.chat-bar textarea')) return;
+  t.style.height = 'auto';
+  t.style.height = Math.min(t.scrollHeight, 6 * 24 + 20) + 'px';
+});
 // Clavier : garde les zones de saisie (messages, commentaires) au-dessus du clavier,
 // même quand le système ne redimensionne pas la page (Android 15+ bord à bord).
 if (window.visualViewport) {
@@ -156,7 +163,7 @@ if (window.visualViewport) {
 // ni zone visible réduite). On réserve alors une hauteur de clavier type dès qu'une zone
 // de saisie du bas est active.
 if (android) {
-  const BOTTOM = '.chat-bar input, .post-form input';
+  const BOTTOM = '.chat-bar textarea, .chat-bar input, .post-form textarea';
   let full = window.innerHeight;
   window.addEventListener('resize', () => { if (!document.activeElement || !document.activeElement.matches || !document.activeElement.matches(BOTTOM)) full = Math.max(full, window.innerHeight); });
   document.addEventListener('focusin', e => {
@@ -165,7 +172,7 @@ if (android) {
       const vv = window.visualViewport;
       if (window.innerHeight < full - 80) return; // la page a été réduite : rien à faire
       if (vv && window.innerHeight - vv.height > 80) return; // le vrai clavier est déjà pris en compte
-      const h = Math.round(window.innerHeight * 0.42);
+      const h = Math.round(window.innerHeight * 0.47);
       document.documentElement.style.setProperty('--kb', h + 'px');
       document.documentElement.classList.add('kb-open', 'kb-guess');
       e.target.scrollIntoView({ block: 'nearest' });

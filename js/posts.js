@@ -130,7 +130,7 @@ export async function renderPost(id) {
     ${mine && canEdit(post) ? `<div class="post-edit"><a class="btn small" href="#/studio/${id}">✏️ Modifier</a></div>` : ''}
     ${post.title ? `<p class="post-meta"><b>${esc(post.title)}</b> · ${esc(post.artist)}</p>` : ''}
     <section class="post-comments"><h2>Commentaires</h2><div id="p-list" class="muted small">Chargement…</div>
-      <form id="p-form" class="chat-bar post-form"><input id="p-text" maxlength="500" placeholder="Ajouter un commentaire…" autocomplete="off" aria-label="Commentaire" enterkeyhint="send"><button class="primary" aria-label="Publier">➤</button></form></section></div>`;
+      <form id="p-form" class="chat-bar post-form"><textarea id="p-text" rows="1" maxlength="500" placeholder="Ajouter un commentaire…" autocomplete="off" aria-label="Commentaire" enterkeyhint="enter"></textarea><button class="primary" aria-label="Publier">➤</button></form></section></div>`;
   const $ = s => view.querySelector(s);
   const likeRef = F.doc(fs, 'posts', id, 'likes', me.uid);
   let liked = false;
@@ -159,7 +159,7 @@ export async function renderPost(id) {
   $('#p-form').onsubmit = async e => {
     e.preventDefault();
     const text = $('#p-text').value.trim(); if (!text) return;
-    $('#p-text').value = '';
+    $('#p-text').value = ''; $('#p-text').dispatchEvent(new Event('input', { bubbles: true }));
     try { await F.addDoc(F.collection(fs, 'posts', id, 'comments'), { from: me.uid, postOwner: post.owner, text, createdAt: F.serverTimestamp() }); }
     catch (err) { toast(errMsg(err), { err: true }); $('#p-text').value = text; }
   };
