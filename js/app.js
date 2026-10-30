@@ -7,7 +7,7 @@ import { renderDiscography } from './discography.js';
 import { renderArtist, renderArtistByName, artistHref } from './artists.js';
 import { renderProfile } from './profile.js';
 import { renderSearch } from './search.js';
-import { renderAccount, renderFriends, renderInbox, renderChat } from './social.js';
+import { renderAccount, renderFriends, renderInbox, renderChat, renderUser, startSocialAlerts } from './social.js';
 import { installSharedLyrics } from './shared-lyrics.js';
 import { loadNews, loadCharts, newsAvailable } from './feeds.js';
 
@@ -195,6 +195,7 @@ const routes = [
   [/^\/profil$/, renderProfile, 'profile'],
   [/^\/compte$/, renderAccount, 'profile'],
   [/^\/amis$/, renderFriends, 'profile'],
+  [/^\/u\/([\w-]+)$/, renderUser, 'profile'],
   [/^\/messages$/, renderInbox, 'profile'],
   [/^\/discussion\/([\w-]+_[\w-]+)$/, renderChat, 'profile'],
   [/^\/recherche$/, renderSearch, 'search'],
@@ -1006,4 +1007,7 @@ window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); instal
 if ('serviceWorker' in navigator && location.protocol !== 'file:' && !android) navigator.serviceWorker.register('sw.js').catch(() => {});
 if (navigator.storage && navigator.storage.persist) navigator.storage.persisted().then(p => { if (!p) navigator.storage.persist().catch(() => {}); });
 installSharedLyrics();
+startSocialAlerts().catch(() => {});
+// Notification de l'APK (demande d'ami, message) : ouvre l'écran concerné.
+window.versoOpenRoute = h => { if (/^#\/(amis|messages|discussion\/[\w-]+|u\/[\w-]+)$/.test(h)) location.hash = h; };
 route();

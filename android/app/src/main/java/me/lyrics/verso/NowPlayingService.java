@@ -64,11 +64,20 @@ public class NowPlayingService extends NotificationListenerService {
     static NowPlayingService instance;
     static void recheck() { NowPlayingService s = instance; if (s != null) s.main.post(s::check); }
 
-    @Override
-    public void onCreate() { super.onCreate(); instance = this; }
+    // Tant que ce service tourne (détection musicale activée), il vérifie aussi les messages
+    // et demandes d'ami toutes les 3 minutes : plus rapide que le planificateur (15 min).
+    private final Runnable socialTick = new Runnable() {
+        @Override public void run() {
+            new Thread(() -> SocialPoller.poll(NowPlayingService.this)).start();
+            main.postDelayed(this, 3 * 60 * 1000L);
+        }
+    };
 
     @Override
-    public void onDestroy() { instance = null; super.onDestroy(); }
+    public void onCreate() { super.onCreate(); instance = this; main.postDelayed(socialTick, 60 * 1000L); }
+
+    @Override
+    public void onDestroy() { instance = null; main.removeCallbacks(socialTick); super.onDestroy(); }
 
     @Override
     public void onListenerDisconnected() {

@@ -59,6 +59,8 @@ public class MainActivity extends Activity {
     private volatile WebUpdater updater;
     private long lastUpdateCheck = 0;
     static final String EXTRA_NOW_PLAYING = "verso.nowPlaying";
+    static final String EXTRA_ROUTE = "verso.route";
+    private String pendingRoute = null;
     /** Vrai quand Verso est à l'écran : pas de notification pour la musique détectée. */
     static volatile boolean visible = false;
     private boolean pageReady = false, pendingNowPlaying = false;
@@ -138,6 +140,7 @@ public class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 pageReady = true;
                 checkWebUpdate();
+                if (pendingRoute != null) { String r = pendingRoute; pendingRoute = null; web.postDelayed(() -> openRoute(r), 900); }
                 if (pendingNowPlaying) { pendingNowPlaying = false; web.postDelayed(() -> openNowPlayingInWeb(), 600); }
             }
 
@@ -245,13 +248,25 @@ public class MainActivity extends Activity {
     protected void onPause() {
         super.onPause();
         visible = false;
+        // Marque l'état actuel comme vu pour ne pas notifier ce qui vient d'être lu dans l'appli.
+        new Thread(() -> SocialPoller.poll(MainActivity.this)).start();
         NowPlayingService.recheck();
     }
 
     private void handleNowPlayingIntent(Intent intent) {
+        if (intent != null && intent.getStringExtra(EXTRA_ROUTE) != null) {
+            String r = intent.getStringExtra(EXTRA_ROUTE);
+            intent.removeExtra(EXTRA_ROUTE);
+            if (pageReady) openRoute(r); else pendingRoute = r;
+            return;
+        }
         if (intent == null || !intent.getBooleanExtra(EXTRA_NOW_PLAYING, false)) return;
         intent.removeExtra(EXTRA_NOW_PLAYING);
         if (pageReady) openNowPlayingInWeb(); else pendingNowPlaying = true;
+    }
+
+    private void openRoute(String r) {
+        web.evaluateJavascript("window.versoOpenRoute && versoOpenRoute(" + JSONObject.quote(r) + ")", null);
     }
 
     private void openNowPlayingInWeb() {
@@ -331,6 +346,12 @@ public class MainActivity extends Activity {
         public boolean nowPlayingAllowed() {
             String flat = Settings.Secure.getString(getContentResolver(), "enabled_notification_listeners");
             return flat != null && flat.contains(getPackageName());
+        }
+
+        /** Session du compte Verso pour les notifications d'amis et de messages ("" : déconnexion). */
+        @JavascriptInterface
+        public void setSocialSession(String uid, String refreshToken) {
+            SocialPoller.setSession(MainActivity.this, uid, refreshToken);
         }
 
         /** Version de l'application web en cours. */

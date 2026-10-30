@@ -398,3 +398,7 @@ body.chat-mode #view { padding: 0; max-width: 720px; }
 .chat-bar input { flex: 1; min-width: 0; border-radius: 22px; }
 .chat-bar .primary { border-radius: 50%; width: 44px; height: 44px; padding: 0; }
 .np-notif { margin: -8px 52px 14px 2px; color: var(--muted); }
+.nav a { position: relative; }
+.nav-dot { position: absolute; top: 2px; left: calc(50% + 6px); min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: #e5484d; color: #fff; font-size: .65rem; font-weight: 700; display: grid; place-items: center; line-height: 1; }
+.so-prof { flex: none; line-height: 0; }
+.chat-who { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }

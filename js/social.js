@@ -159,6 +159,7 @@ export async function renderAccount() {
             avatar: pub.avatar ? await dataURLToBlob(pub.avatar) : local.avatar, updatedAt: Date.now() });
           toast('Connecté');
         }
+        startSocialAlerts();
         go('#/profil');
       } catch (err) { fail(errMsg(err)); }
     };
@@ -169,8 +170,10 @@ export async function renderAccount() {
 export async function signOut() {
   const { U, auth } = await fb();
   await U.signOut(auth);
+  if (window.VersoAndroid && VersoAndroid.setSocialSession) VersoAndroid.setSocialSession('', '');
   await db.setSetting('account', null);
   profileCache.clear();
+  stopSocialAlerts();
 }
 
 // --- Avatars ----------------------------------------------------------------
@@ -200,7 +203,7 @@ export async function renderFriends() {
   const $ = s => view.querySelector(s);
   let friends = [], incoming = [], outgoing = [];
   const rel = uid => friends.find(f => f.other === uid) ? 'friend' : incoming.find(r => r.from === uid) ? 'in' : outgoing.find(r => r.to === uid) ? 'out' : 'none';
-  const row = (p, actions) => `<li class="so-row">${avatarHtml(p)}<div class="so-who"><b>${esc(p.name || '@' + p.handle)}</b><span class="small muted">@${esc(p.handle)}</span></div><div class="so-act">${actions}</div></li>`;
+  const row = (p, actions) => `<li class="so-row"><a class="so-prof" href="#/u/${p.uid}" aria-label="Profil de @${esc(p.handle)}">${avatarHtml(p)}</a><a class="so-who so-link" href="#/u/${p.uid}"><b>${esc(p.name || '@' + p.handle)}</b><span class="small muted">@${esc(p.handle)}</span></a><div class="so-act">${actions}</div></li>`;
 
   const accept = async from => {
     const [a, b] = pairOf(from, me.uid);
@@ -336,8 +339,8 @@ export async function renderChat(pairId) {
   const p = await publicProfile(other).catch(() => ({ uid: other, handle: '', name: 'Ami', avatar: '' }));
   document.body.classList.add('chat-mode');
   view.innerHTML = `<div class="chat">
-    <header class="chat-head"><a class="icon-btn ghost" href="#/messages" aria-label="Retour">←</a>${avatarHtml(p, 38)}
-      <div class="so-who"><b>${esc(p.name || '@' + p.handle)}</b><span class="small muted">@${esc(p.handle)}</span></div></header>
+    <header class="chat-head"><a class="icon-btn ghost" href="#/messages" aria-label="Retour">←</a><a class="so-link chat-who" href="#/u/${other}">${avatarHtml(p, 38)}
+      <div class="so-who"><b>${esc(p.name || '@' + p.handle)}</b><span class="small muted">@${esc(p.handle)} · voir le profil</span></div></a></header>
     <div class="chat-msgs" id="cm" aria-live="polite"><p class="muted small" style="text-align:center">Chargement…</p></div>
     <form class="chat-bar" id="cf">
       <button type="button" class="icon-btn ghost" id="c-att" aria-label="Partager une carte ou un morceau">+</button>
@@ -400,3 +403,95 @@ export async function renderChat(pairId) {
   }, e => { const box = $('#cm'); if (box) box.innerHTML = `<p class="notice err">${esc(errMsg(e))}</p>`; });
   return () => { unsub(); document.body.classList.remove('chat-mode'); };
 }
+
+// --- Profil d'un autre utilisateur -------------------------------------------
+
+export async function renderUser(uid) {
+  const view = document.getElementById('view');
+  const me = await requireUser(); if (!me) return;
+  if (uid === me.uid) { go('#/profil'); return; }
+  const { F, fs } = await fb();
+  view.innerHTML = '<p class="muted">Chargement du profil…</p>';
+  let p;
+  try { profileCache.delete(uid); p = await publicProfile(uid); } catch (e) { view.innerHTML = `<div class="notice err">${esc(errMsg(e))}</div>`; return; }
+  const pair = pairOf(me.uid, uid).join('_');
+  const draw = async () => {
+    const [fr, inc, out] = await Promise.all([
+      F.getDoc(F.doc(fs, 'friendships', pair)).then(d => d.exists()).catch(() => false),
+      F.getDoc(F.doc(fs, 'friendRequests', uid + '_' + me.uid)).then(d => d.exists()).catch(() => false),
+      F.getDoc(F.doc(fs, 'friendRequests', me.uid + '_' + uid)).then(d => d.exists()).catch(() => false),
+    ]);
+    let friendsN = 0;
+    const since = fr ? await F.getDoc(F.doc(fs, 'friendships', pair)).then(d => d.data().createdAt).catch(() => null) : null;
+    const big = p.avatar ? `<img class="pf-avatar" src="${esc(p.avatar)}" alt="" width="96" height="96">` : `<span class="pf-avatar ph" aria-hidden="true">${esc((p.name || p.handle || '?')[0].toUpperCase())}</span>`;
+    const actions = fr ? `<a class="btn primary" href="#/discussion/${pair}">Message</a><button class="ghost" id="u-rm">Amis ✓</button>`
+      : inc ? `<button class="primary" id="u-acc">Accepter la demande</button><button class="ghost" id="u-dec">Refuser</button>`
+      : out ? `<button class="ghost" id="u-cancel">Demande envoyée · annuler</button>`
+      : `<button class="primary" id="u-add">Ajouter en ami</button>`;
+    view.innerHTML = `<div class="pf-top"><button class="icon-btn ghost" onclick="history.back()" aria-label="Retour">←</button></div>
+      <div class="pf-head">${big}<h1>${esc(p.name || '@' + p.handle)}</h1><p class="pf-handle">@${esc(p.handle)}</p>
+        ${since ? `<p class="small muted" style="margin:0">Amis depuis le ${since.toDate().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</p>` : ''}
+        <div class="row pf-btns">${actions}</div>
+        ${p.bio ? `<p class="pf-bio">${esc(p.bio)}</p>` : ''}</div>`;
+    const on = (id, fn) => { const b = view.querySelector(id); if (b) b.onclick = async () => { b.disabled = true; try { await fn(); } catch (e) { toast(errMsg(e), { err: true }); } draw(); }; };
+    on('#u-add', () => F.setDoc(F.doc(fs, 'friendRequests', me.uid + '_' + uid), { from: me.uid, to: uid, createdAt: F.serverTimestamp() }).then(() => toast('Demande envoyée')));
+    on('#u-cancel', () => F.deleteDoc(F.doc(fs, 'friendRequests', me.uid + '_' + uid)));
+    on('#u-dec', () => F.deleteDoc(F.doc(fs, 'friendRequests', uid + '_' + me.uid)));
+    on('#u-acc', async () => {
+      const [a, b] = pairOf(uid, me.uid);
+      await F.setDoc(F.doc(fs, 'friendships', a + '_' + b), { members: [a, b], createdAt: F.serverTimestamp() });
+      await F.deleteDoc(F.doc(fs, 'friendRequests', uid + '_' + me.uid)).catch(() => {});
+      await F.deleteDoc(F.doc(fs, 'friendRequests', me.uid + '_' + uid)).catch(() => {});
+      toast('Vous êtes maintenant amis');
+    });
+    on('#u-rm', async () => {
+      if (await confirmDialog(`Retirer @${p.handle} de vos amis ? Vous ne pourrez plus vous écrire.`, 'Retirer', true)) await F.deleteDoc(F.doc(fs, 'friendships', pair));
+    });
+  };
+  await draw();
+}
+
+// --- Alertes dans l'application (pastilles, messages) et session pour l'APK ----------
+
+let alertsStop = null;
+export async function startSocialAlerts() {
+  const me = await currentUser(); if (!me || alertsStop) return;
+  const { F, fs, auth } = await fb();
+  // L'APK vérifie les nouveautés en arrière-plan avec ce jeton (renouvelable, révoqué à la déconnexion).
+  if (window.VersoAndroid && VersoAndroid.setSocialSession) VersoAndroid.setSocialSession(me.uid, auth.currentUser.refreshToken);
+  let reqs = null, unread = 0, firstFr = true;
+  const seenMsg = new Map();
+  const paint = () => {
+    const n = (reqs ? reqs.size : 0) + unread;
+    document.querySelectorAll('.nav a[data-nav="profile"]').forEach(a => {
+      let d = a.querySelector('.nav-dot');
+      if (!n) { if (d) d.remove(); return; }
+      if (!d) { d = document.createElement('span'); d.className = 'nav-dot'; a.append(d); }
+      d.textContent = n > 9 ? '9+' : n;
+    });
+  };
+  const u1 = F.onSnapshot(F.query(F.collection(fs, 'friendRequests'), F.where('to', '==', me.uid)), async s => {
+    const ids = new Set(s.docs.map(d => d.id));
+    if (reqs) for (const d of s.docs) if (!reqs.has(d.id) && location.hash !== '#/amis') {
+      const p = await publicProfile(d.data().from).catch(() => null);
+      if (p) toast(`@${p.handle} veut vous ajouter en ami`, { duration: 8000, action: { label: 'Voir', run: () => go('#/amis') } });
+    }
+    reqs = ids; paint();
+  }, () => {});
+  const u2 = F.onSnapshot(F.query(F.collection(fs, 'friendships'), F.where('members', 'array-contains', me.uid)), async s => {
+    const list = s.docs.map(d => ({ id: d.id, ...d.data() }));
+    unread = list.filter(f => isUnread(f, me.uid) && location.hash !== '#/discussion/' + f.id).length;
+    for (const f of list) {
+      const at = f.lastAt ? f.lastAt.toMillis() : 0;
+      if (!firstFr && f.lastFrom && f.lastFrom !== me.uid && at > (seenMsg.get(f.id) || 0) && location.hash !== '#/discussion/' + f.id) {
+        const p = await publicProfile(f.members.find(m => m !== me.uid)).catch(() => null);
+        if (p) toast(`@${p.handle} : ${f.lastText}`, { duration: 8000, action: { label: 'Ouvrir', run: () => go('#/discussion/' + f.id) } });
+      }
+      seenMsg.set(f.id, at);
+    }
+    firstFr = false; paint();
+  }, () => {});
+  window.addEventListener('hashchange', () => setTimeout(paint, 300));
+  alertsStop = () => { u1(); u2(); alertsStop = null; };
+}
+export function stopSocialAlerts() { if (alertsStop) alertsStop(); document.querySelectorAll('.nav-dot').forEach(d => d.remove()); }
