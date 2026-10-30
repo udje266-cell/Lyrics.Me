@@ -87,6 +87,24 @@ public class MainActivity extends Activity {
         s.setDomStorageEnabled(true);
         s.setDatabaseEnabled(true);
         s.setMediaPlaybackRequiresUserGesture(true);
+        // Comportement d'application : pas de zoom, taille de texte fixe (la police agrandie
+        // de One UI déformerait la mise en page), pas d'effet de bord ni de menus de navigateur.
+        s.setSupportZoom(false);
+        s.setBuiltInZoomControls(false);
+        s.setDisplayZoomControls(false);
+        s.setTextZoom(100);
+        web.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        web.setVerticalScrollBarEnabled(false);
+        web.setHorizontalScrollBarEnabled(false);
+        web.setOnLongClickListener(v -> {
+            int type = web.getHitTestResult().getType();
+            return type == WebView.HitTestResult.SRC_ANCHOR_TYPE || type == WebView.HitTestResult.IMAGE_TYPE
+                || type == WebView.HitTestResult.SRC_IMAGE_ANCHOR_TYPE;
+        });
+        if (Build.VERSION.SDK_INT >= 33) {
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT, this::handleBack);
+        }
         s.setUserAgentString(s.getUserAgentString() + " VersoAndroid/1.0");
 
         web.addJavascriptInterface(new Bridge(), "VersoAndroid");
@@ -169,8 +187,14 @@ public class MainActivity extends Activity {
     }
 
     @Override
-    public void onBackPressed() {
-        if (web.canGoBack()) web.goBack(); else super.onBackPressed();
+    public void onBackPressed() { handleBack(); }
+
+    // Retour : l'application web ferme d'abord ce qui est ouvert, puis revient en arrière ;
+    // depuis l'accueil, Verso passe en arrière-plan comme une vraie application.
+    private void handleBack() {
+        web.evaluateJavascript("window.versoBack ? versoBack() : false", r -> {
+            if (!"true".equals(r)) moveTaskToBack(true);
+        });
     }
 
     @Override
