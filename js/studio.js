@@ -227,7 +227,7 @@ export async function mountStudio(view, id) {
       <div class="grid2"><div class="field"><label for="t-title">Titre affiché</label><input id="t-title" value="${esc(card.title)}"></div>
         <div class="field"><label for="t-artist">Artiste affiché</label><input id="t-artist" value="${esc(card.artist)}"></div></div>
       <div class="field"><label for="t-font">Police</label><select id="t-font">${FONTS.map(x => `<option value="${x.id}" ${x.id === st.font ? 'selected' : ''}>${x.label}</option>`).join('')}</select></div>
-      <div class="row field">${f.weights.length > 1 ? seg('weight', f.weights.map(w => [w, w >= 700 ? 'Gras' : 'Normal']), st.weight) : ''}
+      <div class="row field"><button class="chip ${st.weight >= 700 ? 'on' : ''}" id="t-bold" aria-pressed="${st.weight >= 700}">Gras</button>
         <button class="chip ${st.italic ? 'on' : ''}" id="t-it">Italique</button><button class="chip ${st.uppercase ? 'on' : ''}" id="t-up">MAJUSCULES</button></div>
       ${reg('size', st.autoFit ? 'Taille maximale' : 'Taille', 20, 200, 1, () => st.size, v => st.size = v, v => v + ' px')}
       <div class="row field"><button class="chip ${st.autoFit ? 'on' : ''}" id="t-fit">Remplir la carte</button><button class="chip ${st.shadow ? 'on' : ''}" id="t-shadow">Ombre</button>
@@ -364,7 +364,8 @@ export async function mountStudio(view, id) {
     on('#t-ex', 'oninput', e => { card.excerpt = e.target.value; change(); drawWords(); });
     on('#t-title', 'oninput', e => { card.title = e.target.value; change(); });
     on('#t-artist', 'oninput', e => { card.artist = e.target.value; change(); });
-    on('#t-font', 'onchange', e => { st.font = e.target.value; const f = fontById(st.font); if (!f.weights.includes(st.weight)) st.weight = f.weights[f.weights.length - 1]; change(); refreshPanel(); });
+    on('#t-font', 'onchange', e => { st.font = e.target.value; const f = fontById(st.font); if (st.weight < 700 && !f.weights.includes(st.weight)) st.weight = Math.min(...f.weights); change(); refreshPanel(); });
+    on('#t-bold', 'onclick', () => { st.weight = st.weight >= 700 ? Math.min(...fontById(st.font).weights) : 700; change(); refreshPanel(); });
     on('#t-it', 'onclick', () => { st.italic = !st.italic; change(); refreshPanel(); });
     on('#t-up', 'onclick', () => { st.uppercase = !st.uppercase; change(); refreshPanel(); });
     on('#t-fit', 'onclick', () => { st.autoFit = !st.autoFit; change(); refreshPanel(); });

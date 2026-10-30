@@ -75,6 +75,24 @@ public class NowPlayingService extends NotificationListenerService {
         if (msm != null) msm.removeOnActiveSessionsChangedListener(sessions);
         for (MediaController c : watched) c.unregisterCallback(callback);
         watched.clear();
+        // One UI peut couper le service (économie d'énergie) : on demande à être relancé.
+        if (Build.VERSION.SDK_INT >= 24) requestRebind(new ComponentName(this, NowPlayingService.class));
+    }
+
+    /**
+     * Chaque changement de titre met à jour la notification du lecteur (Spotify, YouTube Music…).
+     * Android la transmet toujours à ce service, même quand les rappels des sessions média se
+     * sont arrêtés : on en profite pour relire les sessions actives.
+     */
+    @Override
+    public void onNotificationPosted(android.service.notification.StatusBarNotification sbn) {
+        if (getPackageName().equals(sbn.getPackageName())) return;
+        Notification n = sbn.getNotification();
+        if (n == null || n.extras == null || !n.extras.containsKey(Notification.EXTRA_MEDIA_SESSION)) return;
+        try {
+            if (msm == null) msm = (MediaSessionManager) getSystemService(MEDIA_SESSION_SERVICE);
+            rewatch(msm.getActiveSessions(new ComponentName(this, NowPlayingService.class)));
+        } catch (SecurityException ignored) { }
     }
 
     private void rewatch(List<MediaController> list) {

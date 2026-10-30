@@ -91,10 +91,12 @@ const norm = s => s.toLocaleLowerCase('fr').normalize('NFD').replace(/[̀-ͯ]/g,
 
 function fontString(style, size, bold) {
   const f = fontById(style.font);
-  let w = style.weight;
-  if (bold) w = Math.max(...f.weights) > w ? Math.max(...f.weights) : w;
+  // Gras et italique fonctionnent avec toutes les polices : quand la police n'a pas
+  // de version grasse ou italique, le navigateur la fabrique (synthèse).
+  let w = style.weight || 400;
+  if (bold) w = w >= 700 ? 900 : 700;
   const fam = f.system ? f.family : `"${f.family}"`;
-  return `${style.italic && (f.italic || f.system) ? 'italic ' : ''}${w} ${size}px ${fam}, system-ui, sans-serif`;
+  return `${style.italic ? 'italic ' : ''}${w} ${size}px ${fam}, system-ui, sans-serif`;
 }
 
 // Logo de l'application (fichier d'origine, non modifié), affiché dans le bandeau.
