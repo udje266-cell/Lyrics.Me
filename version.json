@@ -1,5 +1,5 @@
 {
- "build": 36,
+ "build": 37,
  "minApk": 16,
  "files": {
   "index.html": "d463817d1133ad1a",
@@ -19,7 +19,7 @@
   "js/feeds.js": "41a843fd1b6aacfc",
   "js/social.js": "7b0c8cfd02b7c671",
   "js/shared-lyrics.js": "866175e36339374b",
-  "js/posts.js": "96edfd4f544fe104",
+  "js/posts.js": "3c6ffc658e3174bb",
   "js/vendor/firebase/firebase-app.js": "f1566138227e01ae",
   "js/vendor/firebase/firebase-auth.js": "e9102c1bf7947096",
   "js/vendor/firebase/firebase-firestore.js": "6dd7670336a214f6",

@@ -35,7 +35,6 @@ export async function publishCard(card) {
 
 export const EDIT_MS = 3 * 3600 * 1000;
 export const canEdit = post => !post.createdAt || Date.now() - post.createdAt.toMillis() < EDIT_MS;
-const left = post => { const m = Math.max(0, Math.ceil((EDIT_MS - (Date.now() - post.createdAt.toMillis())) / 60000)); return m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}` : `${m} min`; };
 
 export async function unpublishCard(id) {
   const user = await currentUser(); if (!user) return;
@@ -61,7 +60,7 @@ export function installPosts() {
         if (map[value.id] === value.updatedAt) return;
         const cur = await db.get('cards', value.id); if (!cur || cur.draft || cur.private) return;
         publishCard(cur).catch(e => {
-          if (e.code === 'locked' || e.code === 'permission-denied') { map[value.id] = value.updatedAt; db.setSetting('published', map); toast('Carte publiée depuis plus de 3 h : vos modifications restent sur ce téléphone, la publication ne change plus.', { duration: 6000 }); }
+          if (e.code === 'locked' || e.code === 'permission-denied') { map[value.id] = value.updatedAt; db.setSetting('published', map); }
           else console.warn('Publication impossible :', e.code || e.message);
         });
       }, 6000));
@@ -128,8 +127,7 @@ export async function renderPost(id) {
     <img class="post-img" src="${post.image}" alt="${esc(post.excerpt)}">
     <div class="post-bar"><button class="post-like" id="p-like" aria-pressed="false"><span class="heart" aria-hidden="true">♡</span> <b id="p-n">0</b></button>
       <span class="muted small" id="p-cn"></span></div>
-    ${mine ? (canEdit(post) && post.createdAt ? `<div class="notice post-edit"><span>✏️ Modifiable encore <b>${left(post)}</b></span><a class="btn small" href="#/studio/${id}">Modifier</a></div>`
-      : '<p class="small muted post-edit">🔒 Publiée il y a plus de 3 h : elle ne peut plus être modifiée.</p>') : ''}
+    ${mine && canEdit(post) ? `<div class="post-edit"><a class="btn small" href="#/studio/${id}">✏️ Modifier</a></div>` : ''}
     ${post.title ? `<p class="post-meta"><b>${esc(post.title)}</b> · ${esc(post.artist)}</p>` : ''}
     <section class="post-comments"><h2>Commentaires</h2><div id="p-list" class="muted small">Chargement…</div>
       <form id="p-form" class="chat-bar post-form"><input id="p-text" maxlength="500" placeholder="Ajouter un commentaire…" autocomplete="off" aria-label="Commentaire" enterkeyhint="send"><button class="primary" aria-label="Publier">➤</button></form></section></div>`;
