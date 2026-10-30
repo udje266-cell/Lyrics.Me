@@ -1,0 +1,163 @@
+rules_version = '2';
+
+// ===============================================================
+// Assumed Data Model (comptes Verso : profils, amis, messages)
+// ===============================================================
+//
+// Collection: profiles            Document ID: uid de l'utilisateur
+//   - handle: string (requis, 3-30, [a-z0-9._]) - pseudo unique (voir handles)
+//   - name: string (requis, 0-50) - nom affiché
+//   - bio: string (requis, 0-160)
+//   - avatar: string (requis, "" ou data:image/jpeg;base64, < 120 000 car.)
+//   - createdAt: timestamp (requis, immuable)
+//   - updatedAt: timestamp (requis, = heure de la requête)
+//   Profil public (aucune donnée personnelle : l'e-mail reste dans Firebase Auth).
+//
+// Collection: handles             Document ID: pseudo (minuscules)
+//   - uid: string (requis, immuable) - propriétaire du pseudo
+//
+// Collection: friendRequests      Document ID: "<from>_<to>"
+//   - from: string (requis, = auteur), to: string (requis, ≠ from)
+//   - createdAt: timestamp (requis, = heure de la requête)
+//
+// Collection: friendships         Document ID: "<uidA>_<uidB>" (uidA < uidB)
+//   - members: list<string> (requis, [uidA, uidB], immuable)
+//   - createdAt: timestamp (requis, immuable)
+//   - lastText: string (0-200), lastFrom: string, lastAt: timestamp (aperçu du dernier message)
+//
+// Sous-collection: friendships/{pairId}/messages   Document ID: auto
+//   - from: string (requis, = auteur, membre de l'amitié)
+//   - text: string (requis, 0-2000)
+//   - image: string (optionnel, data:image/jpeg;base64, < 700 000 car.) - carte partagée
+//   - song: map (optionnel, {title, artist} chaînes < 200) - morceau partagé
+//   - createdAt: timestamp (requis, = heure de la requête)
+//   Messages non modifiables ; l'auteur peut supprimer les siens.
+//
+// ===============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- Helper Functions ----------
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    function data() {
+      return request.resource.data;
+    }
+    function hasOnlyAllowedFields(fields) {
+      return data().keys().hasOnly(fields);
+    }
+    function isStr(v, minLen, maxLen) {
+      return v is string && v.size() >= minLen && v.size() <= maxLen;
+    }
+    function isUid(v) {
+      return isStr(v, 1, 128);
+    }
+    function isValidHandle(h) {
+      return isStr(h, 3, 30) && h.matches('^[a-z0-9._]+$');
+    }
+    function isValidAvatar(a) {
+      return a == '' || (isStr(a, 1, 120000) && a.matches('^data:image/jpeg;base64,.*'));
+    }
+
+    // ---------- Domain Validators ----------
+    function isValidProfile(uid) {
+      return hasOnlyAllowedFields(['handle', 'name', 'bio', 'avatar', 'createdAt', 'updatedAt'])
+        && data().keys().hasAll(['handle', 'name', 'bio', 'avatar', 'createdAt', 'updatedAt'])
+        && isValidHandle(data().handle)
+        && isStr(data().name, 0, 50)
+        && isStr(data().bio, 0, 160)
+        && isValidAvatar(data().avatar)
+        && data().createdAt is timestamp
+        && data().updatedAt == request.time
+        // Le pseudo doit être réservé à son nom (dans la même écriture groupée ou avant).
+        && getAfter(/databases/$(database)/documents/handles/$(data().handle)).data.uid == uid;
+    }
+    function isValidFriendRequest(from, to) {
+      return hasOnlyAllowedFields(['from', 'to', 'createdAt'])
+        && data().from == from && data().to == to
+        && isUid(to) && from != to
+        && data().createdAt == request.time;
+    }
+    function isMember(pairId) {
+      return isAuthenticated()
+        && request.auth.uid in get(/databases/$(database)/documents/friendships/$(pairId)).data.members;
+    }
+    function isValidMessage() {
+      return hasOnlyAllowedFields(['from', 'text', 'image', 'song', 'createdAt'])
+        && data().keys().hasAll(['from', 'text', 'createdAt'])
+        && data().from == request.auth.uid
+        && isStr(data().text, 0, 2000)
+        && (!('image' in data()) || (isStr(data().image, 1, 700000) && data().image.matches('^data:image/jpeg;base64,.*')))
+        && (!('song' in data()) || (data().song is map && data().song.keys().hasOnly(['title', 'artist'])
+              && isStr(data().song.title, 1, 200) && isStr(data().song.artist, 0, 200)))
+        && data().createdAt == request.time;
+    }
+
+    // ---------- Profils publics ----------
+    match /profiles/{uid} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(uid) && isValidProfile(uid);
+      allow update: if isOwner(uid) && isValidProfile(uid)
+        && data().createdAt == resource.data.createdAt;
+      allow delete: if isOwner(uid);
+    }
+
+    // ---------- Pseudos uniques ----------
+    match /handles/{handle} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidHandle(handle)
+        && hasOnlyAllowedFields(['uid']) && data().uid == request.auth.uid;
+      allow update: if false;
+      allow delete: if isAuthenticated() && resource.data.uid == request.auth.uid;
+    }
+
+    // ---------- Demandes d'ami ----------
+    match /friendRequests/{reqId} {
+      allow read: if isAuthenticated()
+        && (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid);
+      allow create: if isAuthenticated()
+        && reqId == request.auth.uid + '_' + data().to
+        && isValidFriendRequest(request.auth.uid, data().to)
+        && exists(/databases/$(database)/documents/profiles/$(data().to));
+      allow update: if false;
+      allow delete: if isAuthenticated()
+        && (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid);
+    }
+
+    // ---------- Amitiés (créées en acceptant une demande) ----------
+    match /friendships/{pairId} {
+      allow read: if isAuthenticated() && request.auth.uid in resource.data.members;
+      allow create: if isAuthenticated()
+        && hasOnlyAllowedFields(['members', 'createdAt'])
+        && data().members is list && data().members.size() == 2
+        && isUid(data().members[0]) && isUid(data().members[1])
+        && data().members[0] < data().members[1]
+        && pairId == data().members[0] + '_' + data().members[1]
+        && request.auth.uid in data().members
+        && data().createdAt == request.time
+        // Seul le destinataire d'une demande existante peut l'accepter.
+        && exists(/databases/$(database)/documents/friendRequests/$(
+             (data().members[0] == request.auth.uid ? data().members[1] : data().members[0]) + '_' + request.auth.uid));
+      // Mise à jour réservée à l'aperçu du dernier message, par un membre.
+      allow update: if isAuthenticated() && request.auth.uid in resource.data.members
+        && data().diff(resource.data).affectedKeys().hasOnly(['lastText', 'lastFrom', 'lastAt'])
+        && hasOnlyAllowedFields(['members', 'createdAt', 'lastText', 'lastFrom', 'lastAt'])
+        && isStr(data().lastText, 0, 200)
+        && data().lastFrom == request.auth.uid
+        && data().lastAt == request.time;
+      allow delete: if isAuthenticated() && request.auth.uid in resource.data.members;
+
+      match /messages/{messageId} {
+        allow read: if isMember(pairId);
+        allow create: if isMember(pairId) && isValidMessage();
+        allow update: if false;
+        allow delete: if isMember(pairId) && resource.data.from == request.auth.uid;
+      }
+    }
+  }
+}

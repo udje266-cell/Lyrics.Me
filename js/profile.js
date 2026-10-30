@@ -1,8 +1,10 @@
 // Profil façon TikTok : avatar, pseudo, bio, compteurs et grille des créations.
-// Profil local (sur cet appareil) : aucune donnée n'est publiée.
+// Sans compte, le profil reste sur l'appareil ; avec un compte Verso, il est publié
+// (nom, pseudo, bio, photo) pour que vos amis vous trouvent.
 import { db } from './db.js';
 import { compressImage } from './render.js';
-import { esc, toast, safe, openDialog, blobUrl } from './app.js';
+import { esc, toast, safe, openDialog, blobUrl, confirmDialog } from './app.js';
+import { currentUser, syncProfile, signOut, unreadCount, errMsg, cleanHandle, fb } from './social.js';
 
 export async function getProfile() {
   return (await db.setting('profile', null)) || { name: '', handle: '', bio: '', avatar: null };
@@ -22,14 +24,21 @@ export async function renderProfile() {
   const artists = new Set(songs.map(s => s.artist.trim().toLowerCase())).size;
   const av = pr.avatar ? `<img class="pf-avatar" src="${blobUrl('avatar' + (pr.updatedAt || 0), pr.avatar)}" alt="" width="96" height="96">` : `<span class="pf-avatar ph" aria-hidden="true">${esc((pr.name || pr.handle || 'V')[0].toUpperCase())}</span>`;
   const stat = (n, l) => `<div><b>${n}</b><span>${l}</span></div>`;
+  const user = await currentUser();
+  let friendsN = 0;
+  if (user) try { const { F, fs } = await fb(); friendsN = (await F.getDocs(F.query(F.collection(fs, 'friendships'), F.where('members', 'array-contains', user.uid)))).size; } catch {}
+  const unread = user ? await unreadCount().catch(() => 0) : 0;
+  const mail = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>';
   view.innerHTML = `
-    <div class="pf-top"><a class="icon-btn ghost pf-gear" href="#/reglages" aria-label="Réglages">${gear}</a></div>
+    <div class="pf-top"><a class="icon-btn ghost pf-gear" href="#/reglages" aria-label="Réglages">${gear}</a>
+      ${user ? `<a class="icon-btn ghost pf-gear pf-mail" href="#/messages" aria-label="Messages${unread ? ` (${unread} non lus)` : ''}">${mail}${unread ? `<span class="so-dot">${unread}</span>` : ''}</a>` : ''}</div>
     <div class="pf-head">
       <button type="button" class="pf-av-btn" id="pf-av" aria-label="Changer la photo de profil">${av}</button>
       <h1>${esc(pr.name || 'Mon profil')}</h1>
       <p class="pf-handle">${pr.handle ? '@' + esc(pr.handle) : '<span class="muted">Choisissez un pseudo</span>'}</p>
-      <div class="pf-stats">${stat(cards.length, 'Créations')}${stat(songs.length, 'Morceaux')}${stat(passages.length, 'Passages')}${stat(artists, 'Artistes')}</div>
-      <button class="btn" id="pf-edit">Modifier le profil</button>
+      <div class="pf-stats">${user ? `<a href="#/amis">${stat(friendsN, 'Amis')}</a>` : ''}${stat(cards.length, 'Créations')}${stat(songs.length, 'Morceaux')}${stat(passages.length, 'Passages')}${user ? '' : stat(artists, 'Artistes')}</div>
+      <div class="row pf-btns"><button class="btn" id="pf-edit">Modifier le profil</button>${user ? '<a class="btn" href="#/amis">Ajouter des amis</a>' : ''}</div>
+      ${user ? '' : '<a class="btn primary pf-join" href="#/compte">Créer un compte ou se connecter</a><p class="small muted" style="margin:0">Pour ajouter des amis et vous envoyer des messages.</p>'}
       ${pr.bio ? `<p class="pf-bio">${esc(pr.bio)}</p>` : ''}
     </div>
     <div class="pf-tabs" role="tablist">
@@ -38,7 +47,11 @@ export async function renderProfile() {
       <button role="tab" data-pt="passages" aria-selected="${tab === 'passages'}">Passages</button>
     </div>
     <div id="pf-body"></div>
-    <p class="small muted" style="text-align:center;margin-top:24px">Profil personnel, enregistré sur cet appareil uniquement.</p>`;
+    <p class="small muted" style="text-align:center;margin-top:24px">${user ? `Connecté avec ${esc(user.email || '')} · <button type="button" class="link" id="pf-out">Se déconnecter</button>` : 'Profil personnel, enregistré sur cet appareil uniquement.'}</p>`;
+  if (user) view.querySelector('#pf-out').onclick = async () => {
+    if (!(await confirmDialog('Se déconnecter de votre compte Verso ? Votre bibliothèque reste sur ce téléphone.', 'Se déconnecter'))) return;
+    await signOut(); toast('Déconnecté'); renderProfile();
+  };
   const body = view.querySelector('#pf-body');
   const draw = () => {
     view.querySelectorAll('[data-pt]').forEach(b => b.setAttribute('aria-selected', b.dataset.pt === tab));
@@ -57,7 +70,15 @@ export async function renderProfile() {
     i.onchange = async () => { const f = i.files[0]; if (!f) return res(null); try { res(await compressImage(f, 512)); } catch (e) { toast(e.message, { err: true }); res(null); } };
     i.click();
   });
-  const save = async p => { p.updatedAt = Date.now(); await safe(() => db.setSetting('profile', p)); };
+  const save = async p => {
+    p.updatedAt = Date.now();
+    if (user) {
+      try { p.handle = await syncProfile(p); }
+      catch (e) { toast(errMsg(e), { err: true }); return false; }
+    }
+    await safe(() => db.setSetting('profile', p));
+    return true;
+  };
   view.querySelector('#pf-av').onclick = async () => { const b = await pickAvatar(); if (b) { pr.avatar = b; await save(pr); renderProfile(); } };
   view.querySelector('#pf-edit').onclick = async () => {
     const v = await openDialog(`<form method="dialog" class="stack"><h3>Modifier le profil</h3>
@@ -69,9 +90,10 @@ export async function renderProfile() {
     if (v !== 'ok') return;
     const d = document.getElementById('dialog');
     pr.name = d.querySelector('#pf-n').value.trim();
-    pr.handle = d.querySelector('#pf-h').value.trim().replace(/^@+/, '').replace(/\s+/g, '').slice(0, 30);
+    const oldHandle = pr.handle;
+    pr.handle = user ? cleanHandle(d.querySelector('#pf-h').value) : d.querySelector('#pf-h').value.trim().replace(/^@+/, '').replace(/\s+/g, '').slice(0, 30);
     pr.bio = d.querySelector('#pf-b').value.trim();
-    await save(pr);
+    if (!(await save(pr))) { pr.handle = oldHandle; return; }
     if (pr.handle && !(await db.setting('signature', ''))) await db.setSetting('signature', '@' + pr.handle);
     toast('Profil enregistré'); renderProfile();
   };
