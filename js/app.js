@@ -330,6 +330,10 @@ function watchNowPlaying() {
       <div style="min-width:0;flex:1"><span class="small muted">${np.playing ? 'En écoute' : 'En pause'} sur ${esc(np.app || 'une application')}</span>
       <div class="np-t">${esc(np.title)}</div><div class="small muted np-a">${esc(np.artist || '')}</div></div>
       <button class="primary" id="np-ly" disabled>…</button></div>`;
+    if (android.notificationsAllowed && !android.notificationsAllowed()) {
+      el.insertAdjacentHTML('beforeend', `<p class="small np-notif">Notifications désactivées : Verso ne peut pas vous prévenir hors de l'application. <button type="button" class="link" id="np-notif">Activer</button></p>`);
+      el.querySelector('#np-notif').onclick = () => { android.requestNotifications(); last = ''; };
+    }
     const btn = el.querySelector('#np-ly');
     btn.onclick = () => openNowPlaying(np);
     const st = await npLookup(np);

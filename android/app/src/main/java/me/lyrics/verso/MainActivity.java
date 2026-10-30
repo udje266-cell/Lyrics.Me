@@ -211,6 +211,9 @@ public class MainActivity extends Activity {
         super.onResume();
         visible = true;
         ((android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE)).cancel(NowPlayingService.NOTIF_ID);
+        // Après une mise à jour de l'APK, Android ne relance pas toujours le service d'écoute.
+        if (new Bridge().nowPlayingAllowed() && Build.VERSION.SDK_INT >= 24)
+            android.service.notification.NotificationListenerService.requestRebind(new ComponentName(this, NowPlayingService.class));
         // Android 13+ : autorisation d'afficher la notification « musique détectée ».
         if (Build.VERSION.SDK_INT >= 33 && new Bridge().nowPlayingAllowed()
             && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
@@ -224,6 +227,7 @@ public class MainActivity extends Activity {
     protected void onPause() {
         super.onPause();
         visible = false;
+        NowPlayingService.recheck();
     }
 
     private void handleNowPlayingIntent(Intent intent) {
@@ -309,6 +313,24 @@ public class MainActivity extends Activity {
         public boolean nowPlayingAllowed() {
             String flat = Settings.Secure.getString(getContentResolver(), "enabled_notification_listeners");
             return flat != null && flat.contains(getPackageName());
+        }
+
+        /** Notifications de Verso autorisées (Android 13+ : permission à accorder). */
+        @JavascriptInterface
+        public boolean notificationsAllowed() {
+            return ((android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE)).areNotificationsEnabled();
+        }
+
+        @JavascriptInterface
+        public void requestNotifications() {
+            runOnUiThread(() -> {
+                if (Build.VERSION.SDK_INT >= 33 && !getPreferences(MODE_PRIVATE).getBoolean("notifAsked2", false)) {
+                    getPreferences(MODE_PRIVATE).edit().putBoolean("notifAsked2", true).apply();
+                    requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 7);
+                } else {
+                    startActivity(new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName()));
+                }
+            });
         }
 
         @JavascriptInterface

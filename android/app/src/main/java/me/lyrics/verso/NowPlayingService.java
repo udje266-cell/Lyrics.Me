@@ -60,6 +60,16 @@ public class NowPlayingService extends NotificationListenerService {
         } catch (SecurityException ignored) { }
     }
 
+    /** Appelé quand on quitte Verso : notifie le titre en cours s'il ne l'a pas encore été. */
+    static NowPlayingService instance;
+    static void recheck() { NowPlayingService s = instance; if (s != null) s.main.post(s::check); }
+
+    @Override
+    public void onCreate() { super.onCreate(); instance = this; }
+
+    @Override
+    public void onDestroy() { instance = null; super.onDestroy(); }
+
     @Override
     public void onListenerDisconnected() {
         if (msm != null) msm.removeOnActiveSessionsChangedListener(sessions);
@@ -88,8 +98,10 @@ public class NowPlayingService extends NotificationListenerService {
         if (title == null || title.trim().isEmpty()) return;
         String key = title + "|" + artist;
         if (key.equals(lastKey)) return;
+        // Verso à l'écran : titre déjà affiché sur l'accueil ; on ne le marque pas comme
+        // notifié pour que la notification parte dès que l'on quitte l'application.
+        if (MainActivity.visible) return;
         lastKey = key;
-        if (MainActivity.visible) return; // déjà affiché sur l'accueil de l'application
         String app = playing.getPackageName();
         try { app = getPackageManager().getApplicationLabel(getPackageManager().getApplicationInfo(app, 0)).toString(); } catch (PackageManager.NameNotFoundException ignored) { }
         final String t = title, a = artist == null ? "" : artist, src = app;

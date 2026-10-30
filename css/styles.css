@@ -341,8 +341,10 @@ html, body, #app { max-width: 100%; overflow-x: hidden; }
 .np button { flex: none; padding: 8px 14px; min-height: 36px; font-size: .85rem; }
 .hero-compact { margin-bottom: 18px; padding-top: 0; }
 
-/* Dans l'APK : se comporter comme une application, pas comme une page web. */
-.is-app, .is-app body { overscroll-behavior: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+/* Dans l'APK : se comporter comme une application, pas comme une page web.
+   (Pas d'overscroll-behavior sur html/body : il bloque le défilement avec overflow-x: hidden.
+   L'effet de bord est déjà retiré côté Android.) */
+.is-app, .is-app body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .is-app input, .is-app textarea, .is-app [contenteditable], .is-app .lyrics { -webkit-user-select: text; user-select: text; }
 .is-app img { -webkit-user-drag: none; }
 .is-app ::-webkit-scrollbar { display: none; }
@@ -395,3 +397,4 @@ body.chat-mode #view { padding: 0; max-width: 720px; }
 .chat-bar { display: flex; gap: 8px; padding: 8px 10px; border-top: 1px solid var(--line); background: var(--bg); }
 .chat-bar input { flex: 1; min-width: 0; border-radius: 22px; }
 .chat-bar .primary { border-radius: 50%; width: 44px; height: 44px; padding: 0; }
+.np-notif { margin: -8px 52px 14px 2px; color: var(--muted); }
