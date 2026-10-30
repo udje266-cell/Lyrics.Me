@@ -456,3 +456,8 @@ button.small, .btn.small { padding: 6px 12px; min-height: 34px; font-size: .82re
 .post-form { position: sticky; bottom: calc(var(--nav-h) + var(--sab)); padding-left: 0; padding-right: 0; margin-top: 8px; }
 .pf-vis { text-align: center; margin: 8px 0; }
 .post-edit { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 12px; } p.post-edit { display: block; }
+.font-pick { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 8px; scroll-snap-type: x proximity; }
+.font-pick button { flex: none; width: 92px; height: 78px; padding: 6px; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; scroll-snap-align: start; }
+.font-pick button span { font-size: 1.7rem; line-height: 1.1; }
+.font-pick button small { font-family: Inter, system-ui, sans-serif; font-weight: 500; font-size: .66rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.font-pick button.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }

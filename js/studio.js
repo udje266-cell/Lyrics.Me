@@ -226,7 +226,7 @@ export async function mountStudio(view, id) {
         <textarea id="t-ex" style="min-height:140px">${esc(card.excerpt)}</textarea></div>
       <div class="grid2"><div class="field"><label for="t-title">Titre affiché</label><input id="t-title" value="${esc(card.title)}"></div>
         <div class="field"><label for="t-artist">Artiste affiché</label><input id="t-artist" value="${esc(card.artist)}"></div></div>
-      <div class="field"><label for="t-font">Police</label><select id="t-font">${FONTS.map(x => `<option value="${x.id}" ${x.id === st.font ? 'selected' : ''}>${x.label}</option>`).join('')}</select></div>
+      <div class="field"><label>Police</label><div class="font-pick" id="t-fonts" role="listbox" aria-label="Police">${FONTS.map(x => `<button type="button" role="option" data-font="${x.id}" aria-selected="${x.id === st.font}" class="${x.id === st.font ? 'on' : ''}" style="font-family:${x.system ? x.family : `'${x.family}'`};font-weight:${Math.max(...x.weights)}"><span>Aa</span><small>${esc(x.label.replace(/ \(.*\)$/, ''))}</small></button>`).join('')}</div></div>
       <div class="row field"><button class="chip ${st.weight >= 700 ? 'on' : ''}" id="t-bold" aria-pressed="${st.weight >= 700}">Gras</button>
         <button class="chip ${st.italic ? 'on' : ''}" id="t-it">Italique</button><button class="chip ${st.uppercase ? 'on' : ''}" id="t-up">MAJUSCULES</button></div>
       ${reg('size', st.autoFit ? 'Taille maximale' : 'Taille', 20, 200, 1, () => st.size, v => st.size = v, v => v + ' px')}
@@ -366,7 +366,7 @@ export async function mountStudio(view, id) {
     on('#t-ex', 'oninput', e => { card.excerpt = e.target.value; change(); drawWords(); });
     on('#t-title', 'oninput', e => { card.title = e.target.value; change(); });
     on('#t-artist', 'oninput', e => { card.artist = e.target.value; change(); });
-    on('#t-font', 'onchange', e => { st.font = e.target.value; const f = fontById(st.font); if (st.weight < 700 && !f.weights.includes(st.weight)) st.weight = Math.min(...f.weights); change(); refreshPanel(); });
+    p.querySelectorAll('[data-font]').forEach(b => b.onclick = () => { st.font = b.dataset.font; const f = fontById(st.font); if (st.weight < 700 && !f.weights.includes(st.weight)) st.weight = Math.min(...f.weights); change(); refreshPanel(); });
     on('#x-pub', 'onclick', async () => {
       card.private = !card.private; await persist(); refreshPanel();
       toast(card.private ? 'Cette carte ne sera pas publiée sur votre profil.' : 'Cette carte sera publiée sur votre profil une fois enregistrée.');
