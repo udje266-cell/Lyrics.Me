@@ -74,6 +74,7 @@ export async function mountStudio(view, id) {
   let imgs = await loadImages(card);
   const templates = await db.all('templates');
   let tab = 'texte', exportType = 'image/png', palette = [], paletteTarget = 'bg', editPalette = false;
+  let animMode = 'word', animDur = 7;
   const history = [], future = [];
   const snap = () => ({ json: JSON.stringify({ excerpt: card.excerpt, title: card.title, artist: card.artist, format: card.format, template: card.template, style: card.style }), photo: card.images.photo });
   let last = snap();
@@ -292,6 +293,12 @@ export async function mountStudio(view, id) {
       <div class="field"><label for="x-name">Nom du fichier</label><input id="x-name" value="${esc(card.fileName || defaultName(card))}"></div>
       <div class="field row">${seg('xtype', [['image/png', 'PNG (qualité max.)'], ['image/jpeg', 'JPEG (plus léger)']], exportType)}</div>
       <div class="row field"><button class="primary" id="x-share">Partager</button><button id="x-dl">Télécharger</button><button id="x-all">Les 3 formats</button></div>
+      <div class="card-box field"><h3>Carte animée (vidéo)</h3>
+        <p class="small muted">Les paroles apparaissent à l'écran, avec un léger zoom sur le fond. Idéal pour les statuts, Stories et TikTok (sans son : ajoutez votre musique dans l'application de partage).</p>
+        <div class="field">${seg('anim', [['word', 'Mot à mot'], ['line', 'Ligne par ligne'], ['fade', 'Fondu']], animMode)}</div>
+        ${reg('animDur', 'Durée', 4, 15, 1, () => animDur, v => animDur = v, v => v + ' s')}
+        <div class="row"><button class="primary" id="v-share">🎬 Créer et partager</button><button id="v-dl">Télécharger la vidéo</button></div>
+        <p class="small muted" id="v-status" aria-live="polite"></p></div>
       <div class="card-box"><h3>Carte</h3><div class="row"><button id="c-dup">Dupliquer</button><button id="c-split">Répartir sur plusieurs cartes</button><button class="ghost danger" id="c-del">Supprimer la carte</button></div>
       <p class="small muted">Créée le ${new Date(card.createdAt).toLocaleString('fr-FR')} · modifiée le ${new Date(card.updatedAt).toLocaleString('fr-FR')}</p></div>`;
   }
@@ -333,6 +340,7 @@ export async function mountStudio(view, id) {
         case 'mweight': m.weight = +v; break;
         case 'format': card.format = v; break;
         case 'xtype': exportType = v; break;
+        case 'anim': animMode = v; break;
       }
       change(); refreshPanel();
     }));
@@ -458,6 +466,8 @@ export async function mountStudio(view, id) {
     on('#x-name', 'onchange', e => { card.fileName = slug(e.target.value); e.target.value = card.fileName; change(); });
     on('#x-dl', 'onclick', () => exportCards([card], false));
     on('#x-share', 'onclick', () => exportCards([card], true));
+    on('#v-share', 'onclick', () => exportVideo(true));
+    on('#v-dl', 'onclick', () => exportVideo(false));
     on('#x-all', 'onclick', () => exportCards(Object.keys(FORMATS).map(f => ({ ...card, format: f })), true, true));
     on('#c-dup', 'onclick', async () => {
       const copy = { ...clone({ ...card, images: null, thumb: null }), images: { ...card.images }, thumb: card.thumb, id: uid(), draft: true, createdAt: Date.now(), updatedAt: Date.now() };
@@ -468,6 +478,55 @@ export async function mountStudio(view, id) {
       if (!await confirmDialog('Supprimer cette carte ? Cette action est définitive.', 'Supprimer', true)) return;
       clearTimeout(saveTimer); deleted = true; await safe(() => db.del('cards', card.id)); go('#/creations'); toast('Carte supprimée');
     });
+  }
+
+  // Vidéo : la carte est redessinée image par image pendant que le canvas est enregistré.
+  async function exportVideo(share) {
+    const status = view.querySelector('#v-status');
+    const types = ['video/mp4;codecs=avc1.42E01E', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm'];
+    const mime = window.MediaRecorder && types.find(t => MediaRecorder.isTypeSupported(t));
+    if (!mime) return toast("Ce navigateur ne sait pas enregistrer de vidéo. Essayez avec Chrome.", { err: true });
+    const vbtns = view.querySelectorAll('#v-share, #v-dl');
+    vbtns.forEach(b => { b.disabled = true; });
+    try {
+      await ensureFonts(card.style);
+      const fit = renderCard(document.createElement('canvas'), card, imgs, { scale: 0.05 });
+      const base = fit.overflow ? { ...card, style: { ...card.style, size: fit.fitSize } } : card;
+      const c = document.createElement('canvas');
+      const stream = c.captureStream(30);
+      const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 8e6 });
+      const chunks = [];
+      rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+      const done = new Promise(res => { rec.onstop = res; });
+      const dur = animDur * 1000;
+      const frame = el => {
+        const k = el / dur;
+        const zoomed = { ...base, style: { ...base.style, bg: { ...base.style.bg, imgZoom: (base.style.bg.imgZoom || 1) * (1 + 0.07 * k) } } };
+        renderCard(c, zoomed, imgs, { scale: 1, anim: { mode: animMode, p: Math.min(1, el / (dur * 0.7)) } });
+      };
+      frame(0);
+      rec.start(250);
+      const t0 = performance.now();
+      await new Promise(res => {
+        const tick = () => {
+          const el = performance.now() - t0;
+          frame(Math.min(el, dur));
+          status.textContent = `Enregistrement de la vidéo… ${Math.min(100, Math.round(el / dur * 100))} %`;
+          if (el >= dur) return res();
+          requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      });
+      rec.stop(); await done;
+      const ext = mime.includes('mp4') ? 'mp4' : 'webm';
+      const file = new File(chunks, `${card.fileName || defaultName(card)}.${ext}`, { type: mime.split(';')[0] });
+      status.textContent = `Vidéo prête (${(file.size / 1048576).toFixed(1).replace('.', ',')} Mo, ${ext.toUpperCase()}).`;
+      if (card.draft) { card.draft = false; await persist(); }
+      if (share) await shareOrDownload([file]); else { download(file, file.name); if (!android) toast('Vidéo téléchargée'); }
+    } catch (e) {
+      status.textContent = '';
+      toast('La vidéo n\'a pas pu être créée : ' + e.message, { err: true });
+    } finally { vbtns.forEach(b => { b.disabled = false; }); }
   }
 
   async function exportCards(list, share, suffixFormat = false) {

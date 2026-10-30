@@ -429,15 +429,39 @@ export function renderCard(canvas, card, imgs = {}, opts = {}) {
   let y = top + Math.max(0, regionH - h) * st.posY;
   const hlColor = st.accent;
   const hasHl = (st.highlights || []).length > 0;
+  // Carte animée (export vidéo) : opts.anim = { mode: 'word' | 'line' | 'fade', p: 0 → 1 }.
+  const A = opts.anim;
+  const N = L.lines.reduce((n, l) => n + l.words.length, 0) || 1;
+  const LN = L.lines.filter(l => l.words.length).length || 1;
+  const clamp01 = v => Math.max(0, Math.min(1, v));
+  const ease = v => 1 - Math.pow(1 - v, 3);
+  let wk = 0, lk = 0;
+  const reveal = (k, li) => {
+    if (!A) return 1;
+    if (A.mode === 'fade') return ease(clamp01(A.p / 0.3));
+    if (A.mode === 'line') return ease(clamp01((A.p - li / LN * 0.8) / 0.15));
+    return ease(clamp01((A.p - k / N * 0.82) / 0.1));
+  };
   for (const line of L.lines) {
     y += lh;
+    const lineA = reveal(wk, lk);
     const baseY = y - (lh - size) / 2 - size * 0.2;
     let x = st.align === 'center' ? (W - line.width) / 2 : st.align === 'right' ? W - m - padX - line.width : m + padX;
-    if (st.lineBg && line.words.length) {
+    if (st.lineBg && line.words.length && lineA > 0) {
+      ctx.globalAlpha = lineA;
       ctx.fillStyle = st.lineBg;
-      ctx.fillRect(x - padX, baseY - size * 0.86, line.width + padX * 2, size * 1.2);
+      const bw = A && A.mode === 'word' ? (line.width + padX * 2) * (0.15 + 0.85 * ease(clamp01((A.p - wk / N * 0.82) / (line.words.length / N * 0.82 + 0.1)))) : line.width + padX * 2;
+      ctx.fillRect(x - padX, baseY - size * 0.86, bw, size * 1.2);
+      ctx.globalAlpha = 1;
     }
+    if (line.words.length) lk++;
     for (const w of line.words) {
+      const wa = A && A.mode !== 'word' ? lineA : reveal(wk, lk - 1);
+      wk++;
+      if (wa <= 0) { x += w.w + L.space; continue; }
+      ctx.save();
+      ctx.globalAlpha = wa;
+      if (wa < 1) ctx.translate(0, (1 - wa) * size * 0.3);
       const bold = w.hl && st.hlMode === 'bold';
       ctx.font = fontString(st, size, bold);
       if (w.hl && st.hlMode === 'mark') {
@@ -445,15 +469,14 @@ export function renderCard(canvas, card, imgs = {}, opts = {}) {
         ctx.fillRect(x - size * 0.1, baseY - size * 0.86, w.w + size * 0.2, size * 1.2);
       }
       ctx.textAlign = 'left';
-      ctx.globalAlpha = st.dimOthers && !w.hl && hasHl ? 0.5 : 1;
+      ctx.globalAlpha = wa * (st.dimOthers && !w.hl && hasHl ? 0.5 : 1);
       let col = st.color;
       if (w.hl && st.hlMode === 'color') col = hlColor;
       if (w.hl && st.hlMode === 'mark') col = st.lineBg || st.bg.color;
       ctx.fillStyle = col;
       if (st.shadow) { ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = size * 0.25 * kr; ctx.shadowOffsetY = size * 0.04 * kr; }
       ctx.fillText(w.t, x, baseY);
-      ctx.shadowColor = 'transparent';
-      ctx.globalAlpha = 1;
+      ctx.restore();
       x += w.w + L.space;
     }
   }

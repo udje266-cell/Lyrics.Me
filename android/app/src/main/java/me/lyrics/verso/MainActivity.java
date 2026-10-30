@@ -271,7 +271,7 @@ public class MainActivity extends Activity {
             try {
                 Uri uri = writeToMediaStore(name, mime, Base64.decode(base64, Base64.DEFAULT));
                 runOnUiThread(() -> Toast.makeText(MainActivity.this,
-                        mime.startsWith("image") ? "Image enregistrée dans la galerie (Pictures/Verso)" : "Fichier enregistré dans Téléchargements", Toast.LENGTH_SHORT).show());
+                        mime.startsWith("image") ? "Image enregistrée dans la galerie (Pictures/Verso)" : mime.startsWith("video") ? "Vidéo enregistrée dans la galerie (Films/Verso)" : "Fichier enregistré dans Téléchargements", Toast.LENGTH_SHORT).show());
                 return uri.toString();
             } catch (Exception e) {
                 return "error:" + e.getMessage();
@@ -296,18 +296,19 @@ public class MainActivity extends Activity {
 
     private Uri writeToMediaStore(String name, String mime, byte[] bytes) throws IOException {
         boolean image = mime.startsWith("image");
+        boolean video = mime.startsWith("video");
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             ContentValues v = new ContentValues();
             v.put(MediaStore.MediaColumns.DISPLAY_NAME, name);
             v.put(MediaStore.MediaColumns.MIME_TYPE, mime);
-            v.put(MediaStore.MediaColumns.RELATIVE_PATH, image ? Environment.DIRECTORY_PICTURES + "/Verso" : Environment.DIRECTORY_DOWNLOADS + "/Verso");
-            Uri coll = image ? MediaStore.Images.Media.EXTERNAL_CONTENT_URI : MediaStore.Downloads.EXTERNAL_CONTENT_URI;
+            v.put(MediaStore.MediaColumns.RELATIVE_PATH, image ? Environment.DIRECTORY_PICTURES + "/Verso" : video ? Environment.DIRECTORY_MOVIES + "/Verso" : Environment.DIRECTORY_DOWNLOADS + "/Verso");
+            Uri coll = image ? MediaStore.Images.Media.EXTERNAL_CONTENT_URI : video ? MediaStore.Video.Media.EXTERNAL_CONTENT_URI : MediaStore.Downloads.EXTERNAL_CONTENT_URI;
             Uri uri = getContentResolver().insert(coll, v);
             if (uri == null) throw new IOException("Enregistrement impossible");
             try (OutputStream out = getContentResolver().openOutputStream(uri)) { out.write(bytes); }
             return uri;
         }
-        File dir = new File(Environment.getExternalStoragePublicDirectory(image ? Environment.DIRECTORY_PICTURES : Environment.DIRECTORY_DOWNLOADS), "Verso");
+        File dir = new File(Environment.getExternalStoragePublicDirectory(image ? Environment.DIRECTORY_PICTURES : video ? Environment.DIRECTORY_MOVIES : Environment.DIRECTORY_DOWNLOADS), "Verso");
         //noinspection ResultOfMethodCallIgnored
         dir.mkdirs();
         File f = new File(dir, name);
@@ -315,7 +316,7 @@ public class MainActivity extends Activity {
         ContentValues v = new ContentValues();
         v.put(MediaStore.MediaColumns.DATA, f.getAbsolutePath());
         v.put(MediaStore.MediaColumns.MIME_TYPE, mime);
-        Uri uri = getContentResolver().insert(image ? MediaStore.Images.Media.EXTERNAL_CONTENT_URI : MediaStore.Files.getContentUri("external"), v);
+        Uri uri = getContentResolver().insert(image ? MediaStore.Images.Media.EXTERNAL_CONTENT_URI : video ? MediaStore.Video.Media.EXTERNAL_CONTENT_URI : MediaStore.Files.getContentUri("external"), v);
         return uri != null ? uri : Uri.fromFile(f);
     }
 }
