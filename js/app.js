@@ -137,6 +137,20 @@ function lyricsFromGoogle(title, artist) {
 // Dans l'application Android (APK), l'enregistrement et le partage passent par le téléphone.
 export const android = window.VersoAndroid || null;
 if (android) document.documentElement.classList.add('is-app');
+// Clavier : garde les zones de saisie (messages, commentaires) au-dessus du clavier,
+// même quand le système ne redimensionne pas la page (Android 15+ bord à bord).
+if (window.visualViewport) {
+  const kb = () => {
+    const vv = window.visualViewport;
+    const h = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+    document.documentElement.style.setProperty('--kb', h + 'px');
+    document.documentElement.classList.toggle('kb-open', h > 80);
+    const a = document.activeElement;
+    if (h > 80 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) a.scrollIntoView({ block: 'nearest' });
+  };
+  visualViewport.addEventListener('resize', kb);
+  visualViewport.addEventListener('scroll', kb);
+}
 // APK 2.7+ : Android réserve lui-même la place des barres système.
 if (/VersoInsets/.test(navigator.userAgent)) document.documentElement.classList.add('native-insets');
 // Bouton retour du téléphone (appelé par l'APK) : ferme d'abord ce qui est ouvert,
