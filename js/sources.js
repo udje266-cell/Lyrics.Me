@@ -188,6 +188,8 @@ export function splitFeat(title) {
 
 // Paroles d'un titre précis : correspondance exacte, puis recherche (durée à ±3 s).
 export async function findLyrics(title, artist, album, duration) {
+  // D'abord les paroles partagées par les utilisateurs de Verso (si un compte est ouvert).
+  try { const { sharedLyrics } = await import('./shared-lyrics.js'); const r = await sharedLyrics(title, artist); if (r) return r; } catch { /* LRCLIB ensuite */ }
   // La correspondance exacte exige une durée (1 à 3600 s) : sans elle, on passe à la recherche.
   if (duration >= 1) {
     const get = new URLSearchParams({ track_name: title, artist_name: artist, album_name: album || '', duration: Math.round(duration) });

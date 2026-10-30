@@ -33,6 +33,16 @@ rules_version = '2';
 //   - createdAt: timestamp (requis, = heure de la requête)
 //   Messages non modifiables ; l'auteur peut supprimer les siens.
 //
+// Collection: lyrics              Document ID: "<titre>__<artiste>" (a-z0-9 et -)
+//   - title, artist: string (requis, 1-200, immuables) ; album: string (requis, 0-200, immuable)
+//   - lyrics: string (requis, 1-20 000) - paroles partagées, modifiables par tous (wiki)
+//   - by: string (requis, = dernier contributeur) ; byHandle: string (requis, 0-30, pseudo public)
+//   - createdAt: timestamp (immuable) ; updatedAt: timestamp (= heure de la requête)
+//   Jamais supprimé.
+//
+// Sous-collection: lyrics/{key}/revisions   Document ID: auto
+//   - lyrics, by, byHandle, updatedAt : mêmes contraintes ; historique en ajout seul.
+//
 // ===============================================================
 
 service cloud.firestore {
@@ -96,6 +106,41 @@ service cloud.firestore {
         && (!('song' in data()) || (data().song is map && data().song.keys().hasOnly(['title', 'artist'])
               && isStr(data().song.title, 1, 200) && isStr(data().song.artist, 0, 200)))
         && data().createdAt == request.time;
+    }
+
+    function isValidLyricsEdit() {
+      return isStr(data().lyrics, 1, 20000)
+        && data().by == request.auth.uid
+        && isStr(data().byHandle, 0, 30)
+        && data().updatedAt == request.time;
+    }
+    function isValidLyrics() {
+      return hasOnlyAllowedFields(['title', 'artist', 'album', 'lyrics', 'by', 'byHandle', 'createdAt', 'updatedAt'])
+        && data().keys().hasAll(['title', 'artist', 'album', 'lyrics', 'by', 'byHandle', 'createdAt', 'updatedAt'])
+        && isStr(data().title, 1, 200) && isStr(data().artist, 1, 200) && isStr(data().album, 0, 200)
+        && data().createdAt is timestamp
+        && isValidLyricsEdit();
+    }
+
+    // ---------- Paroles partagées (collaboratives) ----------
+    match /lyrics/{key} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated()
+        && key.size() <= 300 && key.matches('^[a-z0-9-]+__[a-z0-9-]+$')
+        && isValidLyrics() && data().createdAt == request.time;
+      allow update: if isAuthenticated() && isValidLyrics()
+        && data().diff(resource.data).affectedKeys().hasOnly(['lyrics', 'by', 'byHandle', 'updatedAt']);
+      allow delete: if false;
+
+      match /revisions/{revId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated()
+          && hasOnlyAllowedFields(['lyrics', 'by', 'byHandle', 'updatedAt'])
+          && data().keys().hasAll(['lyrics', 'by', 'byHandle', 'updatedAt'])
+          && isValidLyricsEdit()
+          && existsAfter(/databases/$(database)/documents/lyrics/$(key));
+        allow update, delete: if false;
+      }
     }
 
     // ---------- Profils publics ----------

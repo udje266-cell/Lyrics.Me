@@ -8,6 +8,7 @@ import { renderArtist, renderArtistByName, artistHref } from './artists.js';
 import { renderProfile } from './profile.js';
 import { renderSearch } from './search.js';
 import { renderAccount, renderFriends, renderInbox, renderChat } from './social.js';
+import { installSharedLyrics } from './shared-lyrics.js';
 import { loadNews, loadCharts, newsAvailable } from './feeds.js';
 
 // --- Utilitaires ----------------------------------------------------------
@@ -957,4 +958,5 @@ window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); instal
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:' && !android) navigator.serviceWorker.register('sw.js').catch(() => {});
 if (navigator.storage && navigator.storage.persist) navigator.storage.persisted().then(p => { if (!p) navigator.storage.persist().catch(() => {}); });
+installSharedLyrics();
 route();
